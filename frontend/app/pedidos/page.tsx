@@ -125,6 +125,12 @@ type SortKeyPedido =
   | "estadoPedido"
   | "estadoEntrega";
 
+type JsPDFWithAutoTable = jsPDF & {
+  lastAutoTable?: {
+    finalY?: number;
+  };
+};
+
 function uid() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
@@ -1149,7 +1155,7 @@ export default function PedidosPage() {
       },
     });
 
-    const finalY = (doc as any).lastAutoTable.finalY || 120;
+    const finalY = (doc as JsPDFWithAutoTable).lastAutoTable?.finalY || 120;
 
     doc.roundedRect(14, finalY + 8, 90, 34, 3, 3);
     doc.setFontSize(10);

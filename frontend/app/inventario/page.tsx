@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { Html5Qrcode } from "html5-qrcode";
 
 type Producto = {
   id: string;
@@ -86,6 +87,12 @@ type MovimientoForm = {
 
 type ScannerMode = "fisico" | "camara";
 
+type ApiSuccessResponse<T> = {
+  ok?: boolean;
+  data?: T;
+  error?: string;
+};
+
 const initialMovimiento: MovimientoForm = {
   tipo: "INGRESO",
   cantidad: "",
@@ -102,10 +109,11 @@ const initialScannerMovimiento: MovimientoForm = {
   usuarioEmail: "admin@erp.com",
 };
 
-async function readJsonSafe(res: Response) {
+async function readJsonSafe<T>(res: Response): Promise<T> {
   const text = await res.text();
+
   try {
-    return JSON.parse(text);
+    return JSON.parse(text) as T;
   } catch {
     throw new Error(
       text?.includes("<!DOCTYPE")
@@ -122,6 +130,20 @@ function formatFecha(v?: string) {
   } catch {
     return v;
   }
+}
+
+function isIgnorableScannerError(error: unknown) {
+  const message =
+    error instanceof Error ? error.message : String(error || "");
+
+  return (
+    message.includes("already under transition") ||
+    message.includes("Cannot transition to a new state") ||
+    message.includes("Cannot stop, scanner is not running") ||
+    message.includes("Cannot clear while scan is ongoing") ||
+    message.includes("already closed") ||
+    message.includes("not running")
+  );
 }
 
 export default function InventarioPage() {
@@ -171,13 +193,24 @@ export default function InventarioPage() {
   const [camaraActiva, setCamaraActiva] = useState(false);
 
   const scannerInputRef = useRef<HTMLInputElement | null>(null);
-  const html5QrCodeRef = useRef<any>(null);
+  const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
 
-  async function cargarInventario() {
+  const scannerClosingRef = useRef(false);
+  const scannerStartingRef = useRef(false);
+  const scannerHandledRef = useRef(false);
+  const scannerSessionRef = useRef(0);
+
+  const cargarInventario = useCallback(async () => {
+    if (!apiUrl) {
+      setLoadingInventario(false);
+      alert("NEXT_PUBLIC_API_URL no está configurado");
+      return;
+    }
+
     try {
       setLoadingInventario(true);
       const res = await fetch(`${apiUrl}/inventario`);
-      const data = await readJsonSafe(res);
+      const data = await readJsonSafe<ApiSuccessResponse<InventarioItem[]>>(res);
       setItems(data.data || []);
     } catch (error) {
       console.error("Error cargando inventario:", error);
@@ -189,9 +222,15 @@ export default function InventarioPage() {
     } finally {
       setLoadingInventario(false);
     }
-  }
+  }, [apiUrl]);
 
-  async function cargarMovimientos() {
+  const cargarMovimientos = useCallback(async () => {
+    if (!apiUrl) {
+      setLoadingMovimientos(false);
+      alert("NEXT_PUBLIC_API_URL no está configurado");
+      return;
+    }
+
     try {
       setLoadingMovimientos(true);
       const params = new URLSearchParams();
@@ -207,7 +246,9 @@ export default function InventarioPage() {
       }`;
 
       const res = await fetch(url);
-      const data = await readJsonSafe(res);
+      const data = await readJsonSafe<ApiSuccessResponse<MovimientoInventario[]>>(
+        res
+      );
       setMovimientos(data.data || []);
     } catch (error) {
       console.error("Error cargando movimientos:", error);
@@ -219,15 +260,15 @@ export default function InventarioPage() {
     } finally {
       setLoadingMovimientos(false);
     }
-  }
-
-  useEffect(() => {
-    cargarInventario();
-  }, [apiUrl]);
-
-  useEffect(() => {
-    cargarMovimientos();
   }, [apiUrl, movQ, movTipoFiltro, movAlmacenFiltro, movFechaDesde, movFechaHasta]);
+
+  useEffect(() => {
+    void cargarInventario();
+  }, [cargarInventario]);
+
+  useEffect(() => {
+    void cargarMovimientos();
+  }, [cargarMovimientos]);
 
   const almacenesUnicos = useMemo(() => {
     const map = new Map<string, Almacen>();
@@ -456,7 +497,7 @@ export default function InventarioPage() {
 
   async function guardarMovimiento(e: React.FormEvent) {
     e.preventDefault();
-    if (!itemActivo) return;
+    if (!itemActivo || !apiUrl) return;
 
     try {
       setGuardando(true);
@@ -479,7 +520,7 @@ export default function InventarioPage() {
         body: JSON.stringify(payload),
       });
 
-      const data = await readJsonSafe(res);
+      const data = await readJsonSafe<ApiSuccessResponse<unknown>>(res);
 
       if (!res.ok || !data.ok) {
         alert(data.error || "No se pudo registrar el movimiento");
@@ -501,73 +542,110 @@ export default function InventarioPage() {
     }
   }
 
-  async function buscarPorCodigoBarras(codigo: string) {
-    try {
-      setScannerLoading(true);
-      setScannerError("");
-      setScannerProducto(null);
+  const buscarPorCodigoBarras = useCallback(
+    async (codigo: string) => {
+      if (!apiUrl) return;
 
-      const params = new URLSearchParams();
-      if (scannerAlmacenId) params.set("almacenId", scannerAlmacenId);
+      try {
+        setScannerLoading(true);
+        setScannerError("");
+        setScannerProducto(null);
 
-      const url = `${apiUrl}/inventario/buscar-por-barras/${encodeURIComponent(
-        codigo
-      )}${params.toString() ? `?${params.toString()}` : ""}`;
+        const params = new URLSearchParams();
+        if (scannerAlmacenId) params.set("almacenId", scannerAlmacenId);
 
-      const res = await fetch(url);
-      const data = await readJsonSafe(res);
+        const url = `${apiUrl}/inventario/buscar-por-barras/${encodeURIComponent(
+          codigo
+        )}${params.toString() ? `?${params.toString()}` : ""}`;
 
-      if (!res.ok || !data.ok) {
-        setScannerError(data.error || "No se encontró el código");
-        return;
+        const res = await fetch(url);
+        const data = await readJsonSafe<ApiSuccessResponse<InventarioItem>>(res);
+
+        if (!res.ok || !data.ok) {
+          setScannerError(data.error || "No se encontró el código");
+          return;
+        }
+
+        setScannerProducto(data.data || null);
+        setScannerMovimiento((prev) => ({
+          ...prev,
+          referencia: "SCANNER",
+          cantidad: prev.cantidad || "1",
+        }));
+      } catch (error) {
+        console.error(error);
+        setScannerError(
+          error instanceof Error
+            ? error.message
+            : "Error buscando por código o QR"
+        );
+      } finally {
+        setScannerLoading(false);
       }
-
-      setScannerProducto(data.data || null);
-      setScannerMovimiento((prev) => ({
-        ...prev,
-        referencia: "SCANNER",
-        cantidad: prev.cantidad || "1",
-      }));
-    } catch (error) {
-      console.error(error);
-      setScannerError(
-        error instanceof Error
-          ? error.message
-          : "Error buscando por código o QR"
-      );
-    } finally {
-      setScannerLoading(false);
-    }
-  }
+    },
+    [apiUrl, scannerAlmacenId]
+  );
 
   function abrirScanner() {
+    scannerSessionRef.current += 1;
+    scannerHandledRef.current = false;
+
     setScannerOpen(true);
     setScannerMode("fisico");
     setScannerCodigo("");
     setScannerProducto(null);
     setScannerError("");
     setScannerMovimiento(initialScannerMovimiento);
+
     setTimeout(() => {
       scannerInputRef.current?.focus();
     }, 100);
   }
 
-  async function detenerScannerCamara() {
+  const detenerScannerCamara = useCallback(async () => {
+    const instance = html5QrCodeRef.current;
+
+    if (!instance) {
+      setCamaraActiva(false);
+      return;
+    }
+
+    if (scannerClosingRef.current) {
+      return;
+    }
+
+    scannerClosingRef.current = true;
+    html5QrCodeRef.current = null;
+
     try {
-      if (html5QrCodeRef.current) {
-        const state = html5QrCodeRef.current.getState?.();
-        if (state === 2 || state === 1) {
-          await html5QrCodeRef.current.stop();
+      const state = instance.getState?.();
+
+      if (state === 2 || state === 3) {
+        try {
+          await instance.stop();
+        } catch (error) {
+          if (!isIgnorableScannerError(error)) {
+            throw error;
+          }
         }
-        await html5QrCodeRef.current.clear();
+      }
+
+      try {
+        await instance.clear();
+      } catch (error) {
+        if (!isIgnorableScannerError(error)) {
+          throw error;
+        }
       }
     } catch (error) {
       console.error("Error cerrando cámara:", error);
     } finally {
-      html5QrCodeRef.current = null;
+      scannerClosingRef.current = false;
+      scannerStartingRef.current = false;
+      scannerHandledRef.current = false;
       setCamaraActiva(false);
     }
-  }
+  }, []);
 
   async function cerrarScanner() {
     setScannerOpen(false);
@@ -575,6 +653,8 @@ export default function InventarioPage() {
     setScannerProducto(null);
     setScannerError("");
     setScannerMovimiento(initialScannerMovimiento);
+    scannerHandledRef.current = false;
+    scannerSessionRef.current += 1;
     await detenerScannerCamara();
   }
 
@@ -593,9 +673,75 @@ export default function InventarioPage() {
     }));
   }
 
+  const iniciarScannerCamara = useCallback(async () => {
+    if (!scannerOpen || scannerMode !== "camara") return;
+    if (scannerClosingRef.current || scannerStartingRef.current) return;
+    if (html5QrCodeRef.current) return;
+
+    const sessionId = ++scannerSessionRef.current;
+
+    try {
+      scannerStartingRef.current = true;
+      scannerHandledRef.current = false;
+
+      setScannerError("");
+      setScannerProducto(null);
+
+      const readerEl = document.getElementById("reader");
+      if (!readerEl) {
+        setScannerError("No se encontró el contenedor del scanner.");
+        return;
+      }
+
+      readerEl.innerHTML = "";
+
+      const mod = await import("html5-qrcode");
+      const Html5QrcodeClass = mod.Html5Qrcode;
+
+      const html5QrCode = new Html5QrcodeClass("reader");
+      html5QrCodeRef.current = html5QrCode;
+
+      await html5QrCode.start(
+        { facingMode: "environment" },
+        {
+          fps: 10,
+          qrbox: { width: 220, height: 160 },
+          aspectRatio: 1.777778,
+        },
+        async (decodedText: string) => {
+          if (scannerHandledRef.current) return;
+          if (scannerSessionRef.current !== sessionId) return;
+
+          scannerHandledRef.current = true;
+          setScannerCodigo(decodedText);
+
+          await detenerScannerCamara();
+          await buscarPorCodigoBarras(decodedText);
+        },
+        () => {}
+      );
+
+      if (scannerSessionRef.current !== sessionId) {
+        await detenerScannerCamara();
+        return;
+      }
+
+      setCamaraActiva(true);
+    } catch (error) {
+      console.error(error);
+      setScannerError(
+        "No se pudo iniciar la cámara. Prueba en Chrome/Edge, o usa lector físico."
+      );
+      setCamaraActiva(false);
+      html5QrCodeRef.current = null;
+    } finally {
+      scannerStartingRef.current = false;
+    }
+  }, [buscarPorCodigoBarras, detenerScannerCamara, scannerMode, scannerOpen]);
+
   async function guardarMovimientoScanner(e: React.FormEvent) {
     e.preventDefault();
-    if (!scannerProducto) return;
+    if (!scannerProducto || !apiUrl) return;
 
     try {
       setGuardando(true);
@@ -618,7 +764,7 @@ export default function InventarioPage() {
         body: JSON.stringify(payload),
       });
 
-      const data = await readJsonSafe(res);
+      const data = await readJsonSafe<ApiSuccessResponse<unknown>>(res);
 
       if (!res.ok || !data.ok) {
         alert(data.error || "No se pudo registrar el movimiento");
@@ -632,13 +778,19 @@ export default function InventarioPage() {
       );
 
       if (seguir) {
+        scannerHandledRef.current = false;
         setScannerCodigo("");
         setScannerProducto(null);
         setScannerError("");
         setScannerMovimiento(initialScannerMovimiento);
-        setTimeout(() => {
-          scannerInputRef.current?.focus();
-        }, 100);
+
+        if (scannerMode === "fisico") {
+          setTimeout(() => {
+            scannerInputRef.current?.focus();
+          }, 100);
+        } else {
+          await iniciarScannerCamara();
+        }
       } else {
         await cerrarScanner();
       }
@@ -654,66 +806,24 @@ export default function InventarioPage() {
     }
   }
 
-  async function iniciarScannerCamara() {
-    try {
-      setScannerError("");
-      setScannerProducto(null);
-
-      const mod = await import("html5-qrcode");
-      const Html5Qrcode = mod.Html5Qrcode;
-
-      if (!document.getElementById("reader")) {
-        setScannerError("No se encontró el contenedor del scanner.");
-        return;
-      }
-
-      const html5QrCode = new Html5Qrcode("reader");
-      html5QrCodeRef.current = html5QrCode;
-
-      await html5QrCode.start(
-        { facingMode: "environment" },
-        {
-          fps: 10,
-          qrbox: { width: 220, height: 160 },
-          aspectRatio: 1.777778,
-        },
-        async (decodedText: string) => {
-          setScannerCodigo(decodedText);
-          await buscarPorCodigoBarras(decodedText);
-          await detenerScannerCamara();
-        },
-        () => {}
-      );
-
-      setCamaraActiva(true);
-    } catch (error) {
-      console.error(error);
-      setScannerError(
-        "No se pudo iniciar la cámara. Prueba en Chrome/Edge, o usa lector físico."
-      );
-      setCamaraActiva(false);
-    }
-  }
-
   useEffect(() => {
     if (!scannerOpen) return;
 
     if (scannerMode === "fisico") {
-      detenerScannerCamara();
+      void detenerScannerCamara();
       setTimeout(() => scannerInputRef.current?.focus(), 120);
     }
 
     if (scannerMode === "camara") {
       setTimeout(() => {
-        iniciarScannerCamara();
+        void iniciarScannerCamara();
       }, 150);
     }
 
     return () => {
-      detenerScannerCamara();
+      void detenerScannerCamara();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scannerOpen, scannerMode]);
+  }, [scannerOpen, scannerMode, iniciarScannerCamara, detenerScannerCamara]);
 
   function badgeEstado(estado: string) {
     return estado === "ACTIVO" ? (
@@ -843,34 +953,93 @@ export default function InventarioPage() {
               <table className="min-w-full text-sm">
                 <thead className="bg-slate-100 text-left text-slate-700">
                   <tr>
-                    <th onClick={() => toggleSort("codigo")} className="cursor-pointer px-4 py-3 font-bold">{sortLabel("Código", "codigo")}</th>
-                    <th onClick={() => toggleSort("modelo")} className="cursor-pointer px-4 py-3 font-bold">{sortLabel("Modelo", "modelo")}</th>
-                    <th onClick={() => toggleSort("color")} className="cursor-pointer px-4 py-3 font-bold">{sortLabel("Color", "color")}</th>
-                    <th onClick={() => toggleSort("material")} className="cursor-pointer px-4 py-3 font-bold">{sortLabel("Material", "material")}</th>
-                    <th onClick={() => toggleSort("taco")} className="cursor-pointer px-4 py-3 font-bold">{sortLabel("Taco", "taco")}</th>
-                    <th onClick={() => toggleSort("talla")} className="cursor-pointer px-4 py-3 font-bold">{sortLabel("Talla", "talla")}</th>
-                    <th onClick={() => toggleSort("almacen")} className="cursor-pointer px-4 py-3 font-bold">{sortLabel("Almacén", "almacen")}</th>
-                    <th onClick={() => toggleSort("stock")} className="cursor-pointer px-4 py-3 font-bold">{sortLabel("Stock", "stock")}</th>
-                    <th onClick={() => toggleSort("sku")} className="cursor-pointer px-4 py-3 font-bold">{sortLabel("SKU", "sku")}</th>
-                    <th onClick={() => toggleSort("codigoBarras")} className="cursor-pointer px-4 py-3 font-bold">{sortLabel("Código barras", "codigoBarras")}</th>
+                    <th
+                      onClick={() => toggleSort("codigo")}
+                      className="cursor-pointer px-4 py-3 font-bold"
+                    >
+                      {sortLabel("Código", "codigo")}
+                    </th>
+                    <th
+                      onClick={() => toggleSort("modelo")}
+                      className="cursor-pointer px-4 py-3 font-bold"
+                    >
+                      {sortLabel("Modelo", "modelo")}
+                    </th>
+                    <th
+                      onClick={() => toggleSort("color")}
+                      className="cursor-pointer px-4 py-3 font-bold"
+                    >
+                      {sortLabel("Color", "color")}
+                    </th>
+                    <th
+                      onClick={() => toggleSort("material")}
+                      className="cursor-pointer px-4 py-3 font-bold"
+                    >
+                      {sortLabel("Material", "material")}
+                    </th>
+                    <th
+                      onClick={() => toggleSort("taco")}
+                      className="cursor-pointer px-4 py-3 font-bold"
+                    >
+                      {sortLabel("Taco", "taco")}
+                    </th>
+                    <th
+                      onClick={() => toggleSort("talla")}
+                      className="cursor-pointer px-4 py-3 font-bold"
+                    >
+                      {sortLabel("Talla", "talla")}
+                    </th>
+                    <th
+                      onClick={() => toggleSort("almacen")}
+                      className="cursor-pointer px-4 py-3 font-bold"
+                    >
+                      {sortLabel("Almacén", "almacen")}
+                    </th>
+                    <th
+                      onClick={() => toggleSort("stock")}
+                      className="cursor-pointer px-4 py-3 font-bold"
+                    >
+                      {sortLabel("Stock", "stock")}
+                    </th>
+                    <th
+                      onClick={() => toggleSort("sku")}
+                      className="cursor-pointer px-4 py-3 font-bold"
+                    >
+                      {sortLabel("SKU", "sku")}
+                    </th>
+                    <th
+                      onClick={() => toggleSort("codigoBarras")}
+                      className="cursor-pointer px-4 py-3 font-bold"
+                    >
+                      {sortLabel("Código barras", "codigoBarras")}
+                    </th>
                     <th className="px-4 py-3 font-bold">Estado</th>
                     <th className="px-4 py-3 font-bold">Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
                   {itemsPagina.map((it) => (
-                    <tr key={it.id} className="border-t border-slate-200 bg-white hover:bg-slate-50">
-                      <td className="px-4 py-3 font-semibold text-slate-900">{it.producto.codigo}</td>
+                    <tr
+                      key={it.id}
+                      className="border-t border-slate-200 bg-white hover:bg-slate-50"
+                    >
+                      <td className="px-4 py-3 font-semibold text-slate-900">
+                        {it.producto.codigo}
+                      </td>
                       <td className="px-4 py-3">{it.producto.modelo}</td>
                       <td className="px-4 py-3">{it.producto.color}</td>
                       <td className="px-4 py-3">{it.producto.material}</td>
                       <td className="px-4 py-3">{it.producto.taco}</td>
                       <td className="px-4 py-3">{it.producto.talla}</td>
                       <td className="px-4 py-3">{it.almacen.codigo}</td>
-                      <td className="px-4 py-3">{badgeStock(Number(it.stock || 0))}</td>
+                      <td className="px-4 py-3">
+                        {badgeStock(Number(it.stock || 0))}
+                      </td>
                       <td className="px-4 py-3">{it.sku}</td>
                       <td className="px-4 py-3">{it.codigoBarras}</td>
-                      <td className="px-4 py-3">{badgeEstado(it.producto.estado)}</td>
+                      <td className="px-4 py-3">
+                        {badgeEstado(it.producto.estado)}
+                      </td>
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap gap-2">
                           <button
@@ -930,7 +1099,9 @@ export default function InventarioPage() {
 
                 <button
                   disabled={paginaActual >= totalPaginas}
-                  onClick={() => setPaginaActual((p) => Math.min(totalPaginas, p + 1))}
+                  onClick={() =>
+                    setPaginaActual((p) => Math.min(totalPaginas, p + 1))
+                  }
                   className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   Siguiente ▶
@@ -1016,27 +1187,73 @@ export default function InventarioPage() {
               <table className="min-w-full text-sm">
                 <thead className="bg-slate-100 text-left text-slate-700">
                   <tr>
-                    <th onClick={() => toggleSortMovimiento("createdAt")} className="cursor-pointer px-4 py-3 font-bold">{sortLabelMovimiento("Fecha", "createdAt")}</th>
-                    <th onClick={() => toggleSortMovimiento("tipo")} className="cursor-pointer px-4 py-3 font-bold">{sortLabelMovimiento("Tipo", "tipo")}</th>
-                    <th onClick={() => toggleSortMovimiento("codigo")} className="cursor-pointer px-4 py-3 font-bold">{sortLabelMovimiento("Código", "codigo")}</th>
-                    <th onClick={() => toggleSortMovimiento("modelo")} className="cursor-pointer px-4 py-3 font-bold">{sortLabelMovimiento("Modelo", "modelo")}</th>
-                    <th onClick={() => toggleSortMovimiento("almacen")} className="cursor-pointer px-4 py-3 font-bold">{sortLabelMovimiento("Almacén", "almacen")}</th>
+                    <th
+                      onClick={() => toggleSortMovimiento("createdAt")}
+                      className="cursor-pointer px-4 py-3 font-bold"
+                    >
+                      {sortLabelMovimiento("Fecha", "createdAt")}
+                    </th>
+                    <th
+                      onClick={() => toggleSortMovimiento("tipo")}
+                      className="cursor-pointer px-4 py-3 font-bold"
+                    >
+                      {sortLabelMovimiento("Tipo", "tipo")}
+                    </th>
+                    <th
+                      onClick={() => toggleSortMovimiento("codigo")}
+                      className="cursor-pointer px-4 py-3 font-bold"
+                    >
+                      {sortLabelMovimiento("Código", "codigo")}
+                    </th>
+                    <th
+                      onClick={() => toggleSortMovimiento("modelo")}
+                      className="cursor-pointer px-4 py-3 font-bold"
+                    >
+                      {sortLabelMovimiento("Modelo", "modelo")}
+                    </th>
+                    <th
+                      onClick={() => toggleSortMovimiento("almacen")}
+                      className="cursor-pointer px-4 py-3 font-bold"
+                    >
+                      {sortLabelMovimiento("Almacén", "almacen")}
+                    </th>
                     <th className="px-4 py-3 font-bold">SKU</th>
                     <th className="px-4 py-3 font-bold">Referencia</th>
-                    <th onClick={() => toggleSortMovimiento("cantidad")} className="cursor-pointer px-4 py-3 font-bold">{sortLabelMovimiento("Cantidad", "cantidad")}</th>
-                    <th onClick={() => toggleSortMovimiento("stockAnterior")} className="cursor-pointer px-4 py-3 font-bold">{sortLabelMovimiento("Stock ant.", "stockAnterior")}</th>
-                    <th onClick={() => toggleSortMovimiento("stockNuevo")} className="cursor-pointer px-4 py-3 font-bold">{sortLabelMovimiento("Stock nuevo", "stockNuevo")}</th>
+                    <th
+                      onClick={() => toggleSortMovimiento("cantidad")}
+                      className="cursor-pointer px-4 py-3 font-bold"
+                    >
+                      {sortLabelMovimiento("Cantidad", "cantidad")}
+                    </th>
+                    <th
+                      onClick={() => toggleSortMovimiento("stockAnterior")}
+                      className="cursor-pointer px-4 py-3 font-bold"
+                    >
+                      {sortLabelMovimiento("Stock ant.", "stockAnterior")}
+                    </th>
+                    <th
+                      onClick={() => toggleSortMovimiento("stockNuevo")}
+                      className="cursor-pointer px-4 py-3 font-bold"
+                    >
+                      {sortLabelMovimiento("Stock nuevo", "stockNuevo")}
+                    </th>
                     <th className="px-4 py-3 font-bold">Usuario</th>
                   </tr>
                 </thead>
                 <tbody>
                   {movimientosPagina.map((mov) => (
-                    <tr key={mov.id} className="border-t border-slate-200 bg-white hover:bg-slate-50">
+                    <tr
+                      key={mov.id}
+                      className="border-t border-slate-200 bg-white hover:bg-slate-50"
+                    >
                       <td className="px-4 py-3">{formatFecha(mov.createdAt)}</td>
                       <td className="px-4 py-3">{badgeTipo(mov.tipo)}</td>
-                      <td className="px-4 py-3 font-semibold text-slate-900">{mov.producto.codigo}</td>
+                      <td className="px-4 py-3 font-semibold text-slate-900">
+                        {mov.producto.codigo}
+                      </td>
                       <td className="px-4 py-3">
-                        {mov.producto.modelo} / {mov.producto.color} / T{mov.producto.talla}
+                        {mov.producto.modelo} / {mov.producto.color} / T
+                        {mov.producto.talla}
                       </td>
                       <td className="px-4 py-3">{mov.almacen.codigo}</td>
                       <td className="px-4 py-3">{mov.sku || "-"}</td>
@@ -1104,7 +1321,8 @@ export default function InventarioPage() {
                   Movimiento de inventario
                 </h2>
                 <p className="text-sm text-slate-500">
-                  {itemActivo.producto.modelo} · {itemActivo.producto.color} · T{itemActivo.producto.talla}
+                  {itemActivo.producto.modelo} · {itemActivo.producto.color} · T
+                  {itemActivo.producto.talla}
                 </p>
               </div>
 
@@ -1117,10 +1335,18 @@ export default function InventarioPage() {
             </div>
 
             <div className="mb-4 rounded-2xl bg-slate-50 p-4 text-sm text-slate-700">
-              <div><b>Producto:</b> {itemActivo.producto.codigo}</div>
-              <div><b>Almacén:</b> {itemActivo.almacen.codigo}</div>
-              <div><b>SKU:</b> {itemActivo.sku}</div>
-              <div><b>Stock actual:</b> {itemActivo.stock}</div>
+              <div>
+                <b>Producto:</b> {itemActivo.producto.codigo}
+              </div>
+              <div>
+                <b>Almacén:</b> {itemActivo.almacen.codigo}
+              </div>
+              <div>
+                <b>SKU:</b> {itemActivo.sku}
+              </div>
+              <div>
+                <b>Stock actual:</b> {itemActivo.stock}
+              </div>
             </div>
 
             <form onSubmit={guardarMovimiento} className="space-y-4">
@@ -1132,7 +1358,10 @@ export default function InventarioPage() {
                   <select
                     value={movForm.tipo}
                     onChange={(e) =>
-                      updateMov("tipo", e.target.value as "INGRESO" | "SALIDA" | "AJUSTE")
+                      updateMov(
+                        "tipo",
+                        e.target.value as "INGRESO" | "SALIDA" | "AJUSTE"
+                      )
                     }
                     className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-blue-500"
                   >
@@ -1279,7 +1508,7 @@ export default function InventarioPage() {
                       if (e.key === "Enter") {
                         e.preventDefault();
                         if (scannerCodigo.trim()) {
-                          buscarPorCodigoBarras(scannerCodigo.trim());
+                          void buscarPorCodigoBarras(scannerCodigo.trim());
                         }
                       }
                     }}
@@ -1289,7 +1518,7 @@ export default function InventarioPage() {
                   <button
                     onClick={() => {
                       if (scannerCodigo.trim()) {
-                        buscarPorCodigoBarras(scannerCodigo.trim());
+                        void buscarPorCodigoBarras(scannerCodigo.trim());
                       }
                     }}
                     className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
@@ -1425,9 +1654,7 @@ export default function InventarioPage() {
                     </label>
                     <textarea
                       value={scannerMovimiento.nota}
-                      onChange={(e) =>
-                        updateScannerMov("nota", e.target.value)
-                      }
+                      onChange={(e) => updateScannerMov("nota", e.target.value)}
                       className="min-h-[80px] w-full rounded-xl border border-slate-300 px-3 py-3 text-sm outline-none focus:border-blue-500"
                       placeholder="Opcional"
                     />
@@ -1437,11 +1664,17 @@ export default function InventarioPage() {
                     <button
                       type="button"
                       onClick={() => {
+                        scannerHandledRef.current = false;
                         setScannerCodigo("");
                         setScannerProducto(null);
                         setScannerError("");
                         setScannerMovimiento(initialScannerMovimiento);
-                        setTimeout(() => scannerInputRef.current?.focus(), 100);
+
+                        if (scannerMode === "fisico") {
+                          setTimeout(() => scannerInputRef.current?.focus(), 100);
+                        } else {
+                          void iniciarScannerCamara();
+                        }
                       }}
                       className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-100"
                     >

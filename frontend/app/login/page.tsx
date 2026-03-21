@@ -4,6 +4,11 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "../components/auth/AuthProvider";
 
+function getErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error) return error.message;
+  return fallback;
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const { login, authenticated, loading } = useAuth();
@@ -27,8 +32,8 @@ export default function LoginPage() {
       setSubmitting(true);
       await login(loginValue, password);
       router.replace("/");
-    } catch (error: any) {
-      setErrorMsg(error?.message || "No se pudo iniciar sesión");
+    } catch (error: unknown) {
+      setErrorMsg(getErrorMessage(error, "No se pudo iniciar sesión"));
     } finally {
       setSubmitting(false);
     }
@@ -116,7 +121,7 @@ export default function LoginPage() {
               </button>
             </form>
 
-{/*             <div className="mt-6 rounded-2xl bg-slate-50 p-4 text-sm text-slate-600">
+            {/* <div className="mt-6 rounded-2xl bg-slate-50 p-4 text-sm text-slate-600">
               <div className="font-bold text-slate-800">Acceso inicial</div>
               <div className="mt-1">Usuario: admin</div>
               <div>Contraseña: Admin123*</div>

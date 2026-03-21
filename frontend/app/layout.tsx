@@ -79,7 +79,7 @@ function CompanyLogo({
   }
 
   return (
-    <div className={`flex items-center gap-3 min-w-0 ${className}`}>
+    <div className={`flex min-w-0 items-center gap-3 ${className}`}>
       <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white p-2">
         <Image
           src={COMPANY_LOGO}
@@ -126,27 +126,15 @@ function AppShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { user, can, logout, authenticated } = useAuth();
 
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem("erp-sidebar-collapsed") === "true";
+  });
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
-
-    const saved = window.localStorage.getItem("erp-sidebar-collapsed");
-    if (saved === "true") {
-      setSidebarCollapsed(true);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!mounted) return;
     window.localStorage.setItem("erp-sidebar-collapsed", String(sidebarCollapsed));
-  }, [sidebarCollapsed, mounted]);
-
-  useEffect(() => {
-    setMobileOpen(false);
-  }, [pathname]);
+  }, [sidebarCollapsed]);
 
   const isLoginPage = pathname === "/login";
 
@@ -237,6 +225,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
                     <Link
                       key={item.href}
                       href={item.href}
+                      onClick={() => setMobileOpen(false)}
                       className={[
                         "group flex items-center rounded-2xl px-3 py-3 text-sm font-semibold transition",
                         active
@@ -321,7 +310,10 @@ function AppShell({ children }: { children: React.ReactNode }) {
                   Sesión activa
                 </div>
                 <button
-                  onClick={() => router.push("/usuarios")}
+                  onClick={() => {
+                    setMobileOpen(false);
+                    router.push("/usuarios");
+                  }}
                   className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
                 >
                   Mi acceso

@@ -111,6 +111,12 @@ type SortKeyCompra =
   | "estadoCompra"
   | "estadoRecepcion";
 
+type JsPDFWithAutoTable = jsPDF & {
+  lastAutoTable?: {
+    finalY?: number;
+  };
+};
+
 function uid() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
@@ -633,19 +639,29 @@ export default function ComprasPage() {
     doc.setFontSize(11);
 
     doc.text(`Compra: ${compra.codigo}`, 14, 40);
-    doc.text(`Fecha compra: ${formatDate(compra.fechaCompra || compra.createdAt)}`, 14, 48);
+    doc.text(
+      `Fecha compra: ${formatDate(compra.fechaCompra || compra.createdAt)}`,
+      14,
+      48
+    );
     doc.text(`Fecha recepción: ${formatDate(compra.fechaRecepcion)}`, 14, 56);
 
     doc.text(`Proveedor: ${getProveedorNombre(compra.proveedor)}`, 105, 40);
     doc.text(`Documento: ${getProveedorDocumento(compra.proveedor)}`, 105, 48);
-    doc.text(`Almacén: ${compra.almacen.codigo} - ${compra.almacen.nombre}`, 105, 56);
+    doc.text(
+      `Almacén: ${compra.almacen.codigo} - ${compra.almacen.nombre}`,
+      105,
+      56
+    );
 
     autoTable(doc, {
       startY: 68,
       head: [["Código", "Descripción", "Cant.", "Costo", "Subtotal"]],
       body: compra.detalles.map((d) => [
         d.producto?.codigo || "",
-        `${d.producto?.modelo || ""} ${d.producto?.color || ""} ${d.producto?.material || ""} ${d.producto?.taco || ""} T${d.producto?.talla || ""}`.trim(),
+        `${d.producto?.modelo || ""} ${d.producto?.color || ""} ${
+          d.producto?.material || ""
+        } ${d.producto?.taco || ""} T${d.producto?.talla || ""}`.trim(),
         String(d.cantidad || 0),
         formatMoney(d.costoUnitario || 0),
         formatMoney(d.subtotal || 0),
@@ -661,7 +677,7 @@ export default function ComprasPage() {
       },
     });
 
-    const finalY = (doc as any).lastAutoTable?.finalY || 120;
+    const finalY = (doc as JsPDFWithAutoTable).lastAutoTable?.finalY || 120;
 
     doc.roundedRect(14, finalY + 8, 90, 34, 3, 3);
     doc.setFontSize(10);

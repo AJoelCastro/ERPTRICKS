@@ -51,6 +51,11 @@ function formatDateTime(v?: string | null) {
   }
 }
 
+function getErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error) return error.message;
+  return fallback;
+}
+
 export default function SeguridadAccesosPage() {
   const { can } = useAuth();
   const searchParams = useSearchParams();
@@ -127,25 +132,31 @@ export default function SeguridadAccesosPage() {
       if (mapIndex.usuarios !== undefined) {
         const res = responses[mapIndex.usuarios];
         const data = await readJsonSafe(res);
-        if (!res.ok || !data.ok) throw new Error(data.error || "Error cargando usuarios");
+        if (!res.ok || !data.ok) {
+          throw new Error(data.error || "Error cargando usuarios");
+        }
         setUsuarios(data.data || []);
       }
 
       if (mapIndex.roles !== undefined) {
         const res = responses[mapIndex.roles];
         const data = await readJsonSafe(res);
-        if (!res.ok || !data.ok) throw new Error(data.error || "Error cargando roles");
+        if (!res.ok || !data.ok) {
+          throw new Error(data.error || "Error cargando roles");
+        }
         setRoles(data.data || []);
       }
 
       if (mapIndex.permisos !== undefined) {
         const res = responses[mapIndex.permisos];
         const data = await readJsonSafe(res);
-        if (!res.ok || !data.ok) throw new Error(data.error || "Error cargando permisos");
+        if (!res.ok || !data.ok) {
+          throw new Error(data.error || "Error cargando permisos");
+        }
         setPermisos(data.data || []);
       }
-    } catch (error: any) {
-      alert(error?.message || "No se pudo cargar Seguridad y Accesos");
+    } catch (error: unknown) {
+      alert(getErrorMessage(error, "No se pudo cargar Seguridad y Accesos"));
     } finally {
       setLoading(false);
     }
@@ -160,9 +171,11 @@ export default function SeguridadAccesosPage() {
     const grouped = new Map<string, Permiso[]>();
     for (const p of permisos) {
       if (!grouped.has(p.modulo)) grouped.set(p.modulo, []);
-      grouped.get(p.modulo)!.push(p);
+      grouped.get(p.modulo)?.push(p);
     }
-    return Array.from(grouped.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+    return Array.from(grouped.entries()).sort((a, b) =>
+      a[0].localeCompare(b[0])
+    );
   }, [permisos]);
 
   const usuariosFiltrados = useMemo(() => {
@@ -280,35 +293,45 @@ export default function SeguridadAccesosPage() {
         throw new Error(rolesData.error || "No se pudieron guardar los roles");
       }
 
-      const permsRes = await fetch(`${getApiUrl()}/usuarios/${userId}/permisos`, {
-        method: "PUT",
-        headers: authHeaders(),
-        body: JSON.stringify({ permisos: uPermisos }),
-      });
+      const permsRes = await fetch(
+        `${getApiUrl()}/usuarios/${userId}/permisos`,
+        {
+          method: "PUT",
+          headers: authHeaders(),
+          body: JSON.stringify({ permisos: uPermisos }),
+        }
+      );
 
       const permsData = await readJsonSafe(permsRes);
       if (!permsRes.ok || !permsData.ok) {
-        throw new Error(permsData.error || "No se pudieron guardar los permisos");
+        throw new Error(
+          permsData.error || "No se pudieron guardar los permisos"
+        );
       }
 
       if (isEdit && uPassword.trim()) {
-        const passRes = await fetch(`${getApiUrl()}/usuarios/${userId}/password`, {
-          method: "PATCH",
-          headers: authHeaders(),
-          body: JSON.stringify({ password: uPassword }),
-        });
+        const passRes = await fetch(
+          `${getApiUrl()}/usuarios/${userId}/password`,
+          {
+            method: "PATCH",
+            headers: authHeaders(),
+            body: JSON.stringify({ password: uPassword }),
+          }
+        );
 
         const passData = await readJsonSafe(passRes);
         if (!passRes.ok || !passData.ok) {
-          throw new Error(passData.error || "No se pudo actualizar la contraseña");
+          throw new Error(
+            passData.error || "No se pudo actualizar la contraseña"
+          );
         }
       }
 
       await cargarTodo();
       setModalUsuarioOpen(false);
       resetUsuarioForm();
-    } catch (error: any) {
-      alert(error?.message || "Error guardando usuario");
+    } catch (error: unknown) {
+      alert(getErrorMessage(error, "Error guardando usuario"));
     } finally {
       setGuardando(false);
     }
@@ -372,14 +395,16 @@ export default function SeguridadAccesosPage() {
 
       const permisosData = await readJsonSafe(permisosRes);
       if (!permisosRes.ok || !permisosData.ok) {
-        throw new Error(permisosData.error || "No se pudieron guardar permisos del rol");
+        throw new Error(
+          permisosData.error || "No se pudieron guardar permisos del rol"
+        );
       }
 
       await cargarTodo();
       setModalRolOpen(false);
       resetRolForm();
-    } catch (error: any) {
-      alert(error?.message || "Error guardando rol");
+    } catch (error: unknown) {
+      alert(getErrorMessage(error, "Error guardando rol"));
     } finally {
       setGuardando(false);
     }
@@ -388,7 +413,11 @@ export default function SeguridadAccesosPage() {
   const tabsDisponibles: { key: TabKey; label: string; visible: boolean }[] = [
     { key: "usuarios", label: "Usuarios", visible: can("usuarios.ver") },
     { key: "roles", label: "Roles", visible: can("usuarios.roles") },
-    { key: "permisos", label: "Permisos", visible: can("usuarios.permisos", "usuarios.roles") },
+    {
+      key: "permisos",
+      label: "Permisos",
+      visible: can("usuarios.permisos", "usuarios.roles"),
+    },
   ];
 
   const totalUsuariosActivos = usuarios.filter((u) => u.activo).length;
@@ -400,7 +429,9 @@ export default function SeguridadAccesosPage() {
       <section className="rounded-3xl bg-white p-6 shadow-sm">
         <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-black text-slate-900">Seguridad y Accesos</h1>
+            <h1 className="text-2xl font-black text-slate-900">
+              Seguridad y Accesos
+            </h1>
             <p className="text-sm text-slate-500">
               Gestión centralizada de usuarios, roles y permisos
             </p>
@@ -409,16 +440,26 @@ export default function SeguridadAccesosPage() {
 
         <div className="grid gap-4 md:grid-cols-3">
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-            <div className="text-sm font-semibold text-slate-500">Usuarios activos</div>
-            <div className="mt-2 text-3xl font-black text-slate-900">{totalUsuariosActivos}</div>
+            <div className="text-sm font-semibold text-slate-500">
+              Usuarios activos
+            </div>
+            <div className="mt-2 text-3xl font-black text-slate-900">
+              {totalUsuariosActivos}
+            </div>
           </div>
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
             <div className="text-sm font-semibold text-slate-500">Roles</div>
-            <div className="mt-2 text-3xl font-black text-slate-900">{totalRolesActivos}</div>
+            <div className="mt-2 text-3xl font-black text-slate-900">
+              {totalRolesActivos}
+            </div>
           </div>
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-            <div className="text-sm font-semibold text-slate-500">Módulos con permisos</div>
-            <div className="mt-2 text-3xl font-black text-slate-900">{totalModulos}</div>
+            <div className="text-sm font-semibold text-slate-500">
+              Módulos con permisos
+            </div>
+            <div className="mt-2 text-3xl font-black text-slate-900">
+              {totalModulos}
+            </div>
           </div>
         </div>
       </section>
@@ -483,7 +524,9 @@ export default function SeguridadAccesosPage() {
                     <tbody>
                       {usuariosFiltrados.map((u) => (
                         <tr key={u.id} className="border-t border-slate-200 bg-white">
-                          <td className="px-4 py-3 font-semibold text-slate-900">{u.nombre}</td>
+                          <td className="px-4 py-3 font-semibold text-slate-900">
+                            {u.nombre}
+                          </td>
                           <td className="px-4 py-3">{u.username}</td>
                           <td className="px-4 py-3">{u.email}</td>
                           <td className="px-4 py-3">
@@ -515,7 +558,9 @@ export default function SeguridadAccesosPage() {
                               )}
                             </div>
                           </td>
-                          <td className="px-4 py-3">{formatDateTime(u.ultimoLogin)}</td>
+                          <td className="px-4 py-3">
+                            {formatDateTime(u.ultimoLogin)}
+                          </td>
                           <td className="px-4 py-3">
                             <span
                               className={`rounded-full px-3 py-1 text-xs font-bold ${
@@ -568,8 +613,12 @@ export default function SeguridadAccesosPage() {
                     <div key={rol.id} className="rounded-3xl border border-slate-200 p-5">
                       <div className="flex items-start justify-between gap-3">
                         <div>
-                          <div className="text-lg font-black text-slate-900">{rol.codigo}</div>
-                          <div className="text-sm text-slate-600">{rol.nombre}</div>
+                          <div className="text-lg font-black text-slate-900">
+                            {rol.codigo}
+                          </div>
+                          <div className="text-sm text-slate-600">
+                            {rol.nombre}
+                          </div>
                           <div className="mt-1 text-xs text-slate-500">
                             {rol.descripcion || "Sin descripción"}
                           </div>
@@ -635,7 +684,9 @@ export default function SeguridadAccesosPage() {
                     <tbody>
                       {permisosFiltrados.map((p) => (
                         <tr key={p.id} className="border-t border-slate-200 bg-white">
-                          <td className="px-4 py-3 font-semibold text-slate-900">{p.modulo}</td>
+                          <td className="px-4 py-3 font-semibold text-slate-900">
+                            {p.modulo}
+                          </td>
                           <td className="px-4 py-3">{p.codigo}</td>
                           <td className="px-4 py-3">{p.nombre}</td>
                         </tr>
@@ -647,15 +698,21 @@ export default function SeguridadAccesosPage() {
                 <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                   {permisosPorModulo.map(([modulo, items]) => (
                     <div key={modulo} className="rounded-2xl border border-slate-200 p-4">
-                      <div className="mb-3 text-sm font-black text-slate-900">{modulo}</div>
+                      <div className="mb-3 text-sm font-black text-slate-900">
+                        {modulo}
+                      </div>
                       <div className="space-y-2">
                         {items.map((p) => (
                           <div
                             key={p.id}
                             className="rounded-xl border border-slate-100 px-3 py-2 text-sm"
                           >
-                            <div className="font-semibold text-slate-900">{p.codigo}</div>
-                            <div className="text-xs text-slate-500">{p.nombre}</div>
+                            <div className="font-semibold text-slate-900">
+                              {p.codigo}
+                            </div>
+                            <div className="text-xs text-slate-500">
+                              {p.nombre}
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -691,7 +748,9 @@ export default function SeguridadAccesosPage() {
 
             <div className="grid gap-6 lg:grid-cols-2">
               <section className="rounded-2xl border border-slate-200 p-4">
-                <h3 className="mb-3 text-lg font-black text-slate-900">Datos básicos</h3>
+                <h3 className="mb-3 text-lg font-black text-slate-900">
+                  Datos básicos
+                </h3>
                 <div className="grid gap-3">
                   <input
                     value={uNombre}
@@ -715,7 +774,11 @@ export default function SeguridadAccesosPage() {
                     type="password"
                     value={uPassword}
                     onChange={(e) => setUPassword(e.target.value)}
-                    placeholder={usuarioActivo ? "Nueva contraseña (opcional)" : "Contraseña"}
+                    placeholder={
+                      usuarioActivo
+                        ? "Nueva contraseña (opcional)"
+                        : "Contraseña"
+                    }
                     className="rounded-xl border border-slate-300 px-4 py-3 text-sm"
                   />
 
@@ -745,11 +808,15 @@ export default function SeguridadAccesosPage() {
                           if (e.target.checked) {
                             setURoles((prev) => [...prev, r.id]);
                           } else {
-                            setURoles((prev) => prev.filter((x) => x !== r.id));
+                            setURoles((prev) =>
+                              prev.filter((x) => x !== r.id)
+                            );
                           }
                         }}
                       />
-                      <span className="font-semibold text-slate-900">{r.codigo}</span>
+                      <span className="font-semibold text-slate-900">
+                        {r.codigo}
+                      </span>
                       <span className="text-slate-500">{r.nombre}</span>
                     </label>
                   ))}
@@ -757,11 +824,15 @@ export default function SeguridadAccesosPage() {
               </section>
 
               <section className="rounded-2xl border border-slate-200 p-4 lg:col-span-2">
-                <h3 className="mb-3 text-lg font-black text-slate-900">Permisos directos</h3>
+                <h3 className="mb-3 text-lg font-black text-slate-900">
+                  Permisos directos
+                </h3>
                 <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                   {permisosPorModulo.map(([modulo, items]) => (
                     <div key={modulo} className="rounded-2xl border border-slate-200 p-4">
-                      <div className="mb-3 text-sm font-black text-slate-900">{modulo}</div>
+                      <div className="mb-3 text-sm font-black text-slate-900">
+                        {modulo}
+                      </div>
                       <div className="space-y-2">
                         {items.map((p) => (
                           <label
@@ -775,13 +846,19 @@ export default function SeguridadAccesosPage() {
                                 if (e.target.checked) {
                                   setUPermisos((prev) => [...prev, p.id]);
                                 } else {
-                                  setUPermisos((prev) => prev.filter((x) => x !== p.id));
+                                  setUPermisos((prev) =>
+                                    prev.filter((x) => x !== p.id)
+                                  );
                                 }
                               }}
                             />
                             <div>
-                              <div className="font-semibold text-slate-900">{p.codigo}</div>
-                              <div className="text-xs text-slate-500">{p.nombre}</div>
+                              <div className="font-semibold text-slate-900">
+                                {p.codigo}
+                              </div>
+                              <div className="text-xs text-slate-500">
+                                {p.nombre}
+                              </div>
                             </div>
                           </label>
                         ))}
@@ -858,7 +935,9 @@ export default function SeguridadAccesosPage() {
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {permisosPorModulo.map(([modulo, items]) => (
                 <div key={modulo} className="rounded-2xl border border-slate-200 p-4">
-                  <div className="mb-3 text-sm font-black text-slate-900">{modulo}</div>
+                  <div className="mb-3 text-sm font-black text-slate-900">
+                    {modulo}
+                  </div>
                   <div className="space-y-2">
                     {items.map((p) => (
                       <label
@@ -872,13 +951,19 @@ export default function SeguridadAccesosPage() {
                             if (e.target.checked) {
                               setRPermisos((prev) => [...prev, p.id]);
                             } else {
-                              setRPermisos((prev) => prev.filter((x) => x !== p.id));
+                              setRPermisos((prev) =>
+                                prev.filter((x) => x !== p.id)
+                              );
                             }
                           }}
                         />
                         <div>
-                          <div className="font-semibold text-slate-900">{p.codigo}</div>
-                          <div className="text-xs text-slate-500">{p.nombre}</div>
+                          <div className="font-semibold text-slate-900">
+                            {p.codigo}
+                          </div>
+                          <div className="text-xs text-slate-500">
+                            {p.nombre}
+                          </div>
                         </div>
                       </label>
                     ))}
