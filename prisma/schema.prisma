@@ -1,0 +1,573 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum EstadoGeneral {
+  ACTIVO
+  INACTIVO
+}
+
+enum EstadoPedido {
+  CONFIRMADO
+  PAGADO_PARCIAL
+  PAGADO
+  CANCELADO
+}
+
+enum EstadoEntregaPedido {
+  PENDIENTE
+  EN_PRODUCCION
+  LISTO
+  ENTREGADO
+  CANCELADO
+}
+
+enum ModalidadPedido {
+  MINORISTA
+  MAYORISTA
+}
+
+enum TipoMovimientoInventario {
+  INGRESO
+  SALIDA
+  AJUSTE
+  TRANSFERENCIA
+}
+
+enum TipoMovimientoCaja {
+  INGRESO
+  EGRESO
+  TRANSFERENCIA
+  AJUSTE
+}
+
+enum EstadoCaja {
+  ABIERTA
+  CERRADA
+}
+
+enum EstadoProduccion {
+  LIBERADA
+  EN_PROCESO
+  PAUSADA
+  TERMINADA
+  CANCELADA
+}
+
+enum EstadoEtapaProduccion {
+  PENDIENTE
+  EN_PROCESO
+  TERMINADA
+  OBSERVADA
+  ESPERA
+}
+
+model Usuario {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  username     String    @unique
+  passwordHash String
+  nombre       String
+  activo       Boolean   @default(true)
+  ultimoLogin  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  usuarioRoles    UsuarioRol[]
+  usuarioPermisos UsuarioPermiso[]
+}
+
+model Rol {
+  id          String   @id @default(cuid())
+  codigo      String   @unique
+  nombre      String
+  descripcion String?
+  activo      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  usuarioRoles UsuarioRol[]
+  rolPermisos  RolPermiso[]
+}
+
+model Permiso {
+  id          String   @id @default(cuid())
+  codigo      String   @unique
+  nombre      String
+  modulo      String
+  descripcion String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  rolPermisos     RolPermiso[]
+  usuarioPermisos UsuarioPermiso[]
+}
+
+model UsuarioRol {
+  id        String   @id @default(cuid())
+  usuarioId String
+  rolId     String
+  createdAt DateTime @default(now())
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  rol     Rol     @relation(fields: [rolId], references: [id], onDelete: Cascade)
+
+  @@unique([usuarioId, rolId])
+}
+
+model RolPermiso {
+  id        String   @id @default(cuid())
+  rolId     String
+  permisoId String
+  createdAt DateTime @default(now())
+
+  rol     Rol     @relation(fields: [rolId], references: [id], onDelete: Cascade)
+  permiso Permiso @relation(fields: [permisoId], references: [id], onDelete: Cascade)
+
+  @@unique([rolId, permisoId])
+}
+
+model UsuarioPermiso {
+  id        String   @id @default(cuid())
+  usuarioId String
+  permisoId String
+  createdAt DateTime @default(now())
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  permiso Permiso @relation(fields: [permisoId], references: [id], onDelete: Cascade)
+
+  @@unique([usuarioId, permisoId])
+}
+
+model Cliente {
+  id     String @id @default(cuid())
+  codigo String @unique
+
+  tipoCliente String @default("PERSONA_NATURAL") // PERSONA_NATURAL | PERSONA_JURIDICA
+
+  dni String? @unique
+  ruc String? @unique
+
+  nombres     String?
+  apellidos   String?
+  razonSocial String?
+
+  telefono     String
+  categoria    String
+  departamento String?
+  ciudad       String?
+  distrito     String?
+  direccion    String?
+  agencia      String?
+  local        String?
+  estado       EstadoGeneral @default(ACTIVO)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  ventas  Venta[]
+  pedidos Pedido[]
+}
+
+model Producto {
+  id        String        @id @default(cuid())
+  codigo    String        @unique
+  modelo    String
+  color     String
+  material  String
+  taco      String
+  coleccion String?
+  talla     Int
+  costo     Decimal       @db.Decimal(10, 2)
+  precio    Decimal       @db.Decimal(10, 2)
+  estado    EstadoGeneral @default(ACTIVO)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  inventarios           Inventario[]
+  detalleVentas         DetalleVenta[]
+  detallePedidos        DetallePedido[]
+  movimientosInventario MovimientoInventario[]
+  ordenesProduccionBase OrdenProduccion[]
+  detallesCompra        DetalleCompra[]
+}
+
+model Almacen {
+  id        String   @id @default(cuid())
+  codigo    String   @unique
+  nombre    String
+  activo    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  inventarios        Inventario[]
+  movimientosInv     MovimientoInventario[]
+  ventas             Venta[]
+  pedidosSolicitados Pedido[]               @relation("PedidoAlmacenSolicitado")
+  pedidosAtendidos   Pedido[]               @relation("PedidoAlmacenAtendido")
+  cajas              Caja[]
+  ordenesProduccion  OrdenProduccion[]
+  compras            Compra[]
+}
+
+model Inventario {
+  id           String   @id @default(cuid())
+  productoId   String
+  almacenId    String
+  codigoBarras String   @unique
+  sku          String
+  stock        Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  producto Producto @relation(fields: [productoId], references: [id])
+  almacen  Almacen  @relation(fields: [almacenId], references: [id])
+
+  @@unique([productoId, almacenId])
+}
+
+model MovimientoInventario {
+  id            String                   @id @default(cuid())
+  tipo          TipoMovimientoInventario
+  productoId    String
+  almacenId     String
+  codigoBarras  String?
+  sku           String?
+  cantidad      Int
+  stockAnterior Int
+  stockNuevo    Int
+  referencia    String?
+  nota          String?
+  usuarioEmail  String?
+  createdAt     DateTime                 @default(now())
+
+  producto Producto @relation(fields: [productoId], references: [id])
+  almacen  Almacen  @relation(fields: [almacenId], references: [id])
+}
+
+model Venta {
+  id              String    @id @default(cuid())
+  codigo          String    @unique
+  clienteId       String
+  almacenId       String
+  totalProductos  Int
+  subtotalSinIgv  Decimal   @db.Decimal(10, 2)
+  descuento       Decimal   @db.Decimal(10, 2)
+  igv             Decimal   @db.Decimal(10, 2)
+  totalConIgv     Decimal   @db.Decimal(10, 2)
+  metodoPago      String
+  adelanto        Decimal   @db.Decimal(10, 2)
+  saldo           Decimal   @db.Decimal(10, 2)
+  estado          String
+  fechaEnvio      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  tipoComprobante String? // BOLETA, FACTURA, NOTA_VENTA
+  serie           String?
+  numero          String?
+  docCliente      String?
+  razonSocial     String?
+  direccionFiscal String?
+
+  cliente  Cliente        @relation(fields: [clienteId], references: [id])
+  almacen  Almacen        @relation(fields: [almacenId], references: [id])
+  detalles DetalleVenta[]
+  pagos    PagoVenta[]
+}
+
+model DetalleVenta {
+  id             String    @id @default(cuid())
+  ventaId        String
+  productoId     String
+  codigoBarras   String?
+  sku            String?
+  modelo         String
+  color          String
+  material       String?
+  talla          Int
+  taco           String?
+  cantidad       Int
+  precioUnitario Decimal   @db.Decimal(10, 2)
+  subtotal       Decimal   @db.Decimal(10, 2)
+  fechaEnvio     DateTime?
+  createdAt      DateTime  @default(now())
+
+  venta    Venta    @relation(fields: [ventaId], references: [id])
+  producto Producto @relation(fields: [productoId], references: [id])
+}
+
+model Pedido {
+  id                  String              @id @default(cuid())
+  codigo              String              @unique
+  clienteId           String
+  modalidad           ModalidadPedido
+  tipoPedido          String
+  almacenSolicitadoId String
+  almacenAtendidoId   String
+  fechaCompromiso     DateTime?
+  prioridad           String
+  subtotal            Decimal             @db.Decimal(10, 2)
+  descuento           Decimal             @db.Decimal(10, 2)
+  igv                 Decimal             @db.Decimal(10, 2)
+  total               Decimal             @db.Decimal(10, 2)
+  adelanto            Decimal             @db.Decimal(10, 2)
+  saldo               Decimal             @db.Decimal(10, 2)
+  metodoPago          String?
+  estadoPedido        EstadoPedido        @default(CONFIRMADO)
+  estadoEntrega       EstadoEntregaPedido @default(PENDIENTE)
+  origenAtencion      String?
+  observaciones       String?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  cliente           Cliente @relation(fields: [clienteId], references: [id])
+  almacenSolicitado Almacen @relation("PedidoAlmacenSolicitado", fields: [almacenSolicitadoId], references: [id])
+  almacenAtendido   Almacen @relation("PedidoAlmacenAtendido", fields: [almacenAtendidoId], references: [id])
+
+  detalles  DetallePedido[]
+  historial HistorialPedido[]
+}
+
+model DetallePedido {
+  id                  String   @id @default(cuid())
+  pedidoId            String
+  productoId          String
+  modelo              String
+  color               String
+  material            String?
+  talla               Int
+  taco                String?
+  cantidad            Int
+  precioUnitario      Decimal  @db.Decimal(10, 2)
+  subtotal            Decimal  @db.Decimal(10, 2)
+  stockActualAlmacen  Int      @default(0)
+  stockOtrosAlmacenes String?
+  tipoAtencion        String
+  codigoBarras        String?
+  estadoLinea         String   @default("PENDIENTE")
+  observaciones       String?
+  createdAt           DateTime @default(now())
+
+  pedido   Pedido   @relation(fields: [pedidoId], references: [id])
+  producto Producto @relation(fields: [productoId], references: [id])
+}
+
+model HistorialPedido {
+  id              String   @id @default(cuid())
+  pedidoId        String
+  detallePedidoId String?
+  tipoEvento      String
+  estadoAnterior  String?
+  estadoNuevo     String?
+  detalle         String?
+  usuarioEmail    String?
+  createdAt       DateTime @default(now())
+
+  pedido Pedido @relation(fields: [pedidoId], references: [id])
+}
+
+model Caja {
+  id            String     @id @default(cuid())
+  codigo        String     @unique
+  nombre        String
+  almacenId     String
+  saldoInicial  Decimal    @db.Decimal(10, 2)
+  saldoActual   Decimal    @db.Decimal(10, 2)
+  responsable   String?
+  estado        EstadoCaja @default(CERRADA)
+  fechaApertura DateTime?
+  fechaCierre   DateTime?
+  notas         String?
+
+  saldoContado      Decimal? @db.Decimal(10, 2)
+  diferenciaCierre  Decimal? @db.Decimal(10, 2)
+  observacionCierre String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  almacen     Almacen          @relation(fields: [almacenId], references: [id])
+  movimientos MovimientoCaja[]
+}
+
+model MovimientoCaja {
+  id           String             @id @default(cuid())
+  cajaId       String
+  tipo         TipoMovimientoCaja
+  subtipo      String?
+  monto        Decimal            @db.Decimal(10, 2)
+  moneda       String             @default("PEN")
+  metodoPago   String?
+  referencia   String?
+  proveedor    String?
+  persona      String?
+  usuarioEmail String?
+  facturaSiNo  String?
+  numFactura   String?
+  vinculo      String?
+  detalle      String?
+  saldoPost    Decimal            @db.Decimal(10, 2)
+  notas        String?
+  createdAt    DateTime           @default(now())
+
+  caja Caja @relation(fields: [cajaId], references: [id])
+}
+
+model OrdenProduccion {
+  id                 String           @id @default(cuid())
+  codigo             String           @unique
+  productoBaseId     String
+  modelo             String
+  color              String
+  material           String?
+  taco               String?
+  coleccion          String?
+  cantidadPares      Int
+  corridaJson        Json
+  almacenDestinoId   String
+  prioridad          String
+  fechaInicio        DateTime?
+  fechaCompromiso    DateTime?
+  fechaEntregaReal   DateTime?
+  estadoGeneral      EstadoProduccion @default(LIBERADA)
+  etapaActual        String?
+  paresComprometidos Int              @default(0)
+  paresLibres        Int              @default(0)
+  observaciones      String?
+  usuarioEmail       String?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  productoBase   Producto               @relation(fields: [productoBaseId], references: [id])
+  almacenDestino Almacen                @relation(fields: [almacenDestinoId], references: [id])
+  etapas         EtapaProduccion[]
+  movimientos    MovimientoProduccion[]
+}
+
+model EtapaProduccion {
+  id                String                @id @default(cuid())
+  ordenProduccionId String
+  etapa             String
+  ordenEtapa        Int
+  responsableId     String?
+  responsableNombre String?
+  fechaInicio       DateTime?
+  fechaFin          DateTime?
+  fechaCompromiso   DateTime?
+  fechaReprogramada DateTime?
+  cantidadRecibida  Int                   @default(0)
+  cantidadProcesada Int                   @default(0)
+  cantidadObservada Int                   @default(0)
+  costoManoObra     Decimal               @db.Decimal(10, 2)
+  estadoEtapa       EstadoEtapaProduccion @default(PENDIENTE)
+  observaciones     String?
+  usuarioEmail      String?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+
+  ordenProduccion OrdenProduccion @relation(fields: [ordenProduccionId], references: [id])
+}
+
+model MovimientoProduccion {
+  id                String   @id @default(cuid())
+  ordenProduccionId String
+  etapaOrigen       String?
+  etapaDestino      String?
+  responsableSale   String?
+  responsableEntra  String?
+  cantidad          Int
+  observaciones     String?
+  usuarioEmail      String?
+  createdAt         DateTime @default(now())
+
+  ordenProduccion OrdenProduccion @relation(fields: [ordenProduccionId], references: [id])
+}
+
+model PagoVenta {
+  id           String   @id @default(cuid())
+  ventaId      String
+  monto        Decimal  @db.Decimal(10, 2)
+  metodoPago   String?
+  nota         String?
+  usuarioEmail String?
+  createdAt    DateTime @default(now())
+
+  venta Venta @relation(fields: [ventaId], references: [id])
+}
+
+model Proveedor {
+  id            String   @id @default(cuid())
+  codigo        String   @unique
+  tipoProveedor String // PERSONA_NATURAL | PERSONA_JURIDICA
+  dni           String?  @unique
+  ruc           String?  @unique
+  nombres       String?
+  apellidos     String?
+  razonSocial   String?
+  telefono      String?
+  email         String?
+  direccion     String?
+  contacto      String?
+  estado        String   @default("ACTIVO") // ACTIVO | INACTIVO
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  compras Compra[]
+}
+
+model Compra {
+  id              String    @id @default(cuid())
+  codigo          String    @unique
+  proveedorId     String
+  almacenId       String
+  fechaCompra     DateTime?
+  fechaRecepcion  DateTime?
+  subtotal        Decimal   @db.Decimal(12, 2)
+  descuento       Decimal   @default(0) @db.Decimal(12, 2)
+  igv             Decimal   @db.Decimal(12, 2)
+  total           Decimal   @db.Decimal(12, 2)
+  adelanto        Decimal   @default(0) @db.Decimal(12, 2)
+  saldo           Decimal   @db.Decimal(12, 2)
+  metodoPago      String?
+  estadoCompra    String // REGISTRADA | PAGADO_PARCIAL | PAGADA | CANCELADA
+  estadoRecepcion String // PENDIENTE | INGRESADA | PARCIAL | CANCELADA
+  observaciones   String?
+  usuarioEmail    String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  proveedor Proveedor         @relation(fields: [proveedorId], references: [id])
+  almacen   Almacen           @relation(fields: [almacenId], references: [id])
+  detalles  DetalleCompra[]
+  historial HistorialCompra[]
+}
+
+model DetalleCompra {
+  id            String   @id @default(cuid())
+  compraId      String
+  productoId    String
+  cantidad      Int
+  costoUnitario Decimal  @db.Decimal(12, 2)
+  subtotal      Decimal  @db.Decimal(12, 2)
+  observaciones String?
+  createdAt     DateTime @default(now())
+
+  compra   Compra   @relation(fields: [compraId], references: [id], onDelete: Cascade)
+  producto Producto @relation(fields: [productoId], references: [id])
+}
+
+model HistorialCompra {
+  id             String   @id @default(cuid())
+  compraId       String
+  tipoEvento     String
+  estadoAnterior String?
+  estadoNuevo    String?
+  detalle        String?
+  usuarioEmail   String?
+  createdAt      DateTime @default(now())
+
+  compra Compra @relation(fields: [compraId], references: [id], onDelete: Cascade)
+}
