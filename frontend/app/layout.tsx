@@ -41,6 +41,7 @@ const COMPANY_LOGO = "/logo-empresa.svg";
 
 const menuItems: MenuItem[] = [
   { label: "Dashboard", href: "/", icon: LayoutDashboard, permissions: ["dashboard.ver"] },
+  { label: "Almacenes", href: "/almacenes", icon: Boxes, permissions: ["almacenes.ver"] },
   { label: "Productos", href: "/productos", icon: ShoppingBag, permissions: ["productos.ver"] },
   { label: "Inventario", href: "/inventario", icon: Package, permissions: ["inventario.ver"] },
   { label: "Clientes", href: "/clientes", icon: Users, permissions: ["clientes.ver"] },
@@ -53,6 +54,7 @@ const menuItems: MenuItem[] = [
   { label: "Usuarios", href: "/usuarios", icon: UserCog, permissions: ["usuarios.ver"] },
   { label: "Roles", href: "/roles", icon: ShieldCheck, permissions: ["usuarios.roles"] },
   { label: "Permisos", href: "/permisos", icon: KeyRound, permissions: ["usuarios.permisos", "usuarios.roles"] },
+  
 ];
 
 function CompanyLogo({
