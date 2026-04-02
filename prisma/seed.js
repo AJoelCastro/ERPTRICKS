@@ -4,6 +4,12 @@ const prisma = require("../src/lib/prisma");
 
 const permisosBase = [
   ["dashboard.ver", "Ver dashboard", "DASHBOARD"],
+
+  ["almacenes.ver", "Ver almacenes", "ALMACENES"],
+  ["almacenes.crear", "Crear almacenes", "ALMACENES"],
+  ["almacenes.editar", "Editar almacenes", "ALMACENES"],
+  ["almacenes.estado", "Cambiar estado de almacenes", "ALMACENES"],
+
   ["productos.ver", "Ver productos", "PRODUCTOS"],
   ["productos.crear", "Crear productos", "PRODUCTOS"],
   ["productos.editar", "Editar productos", "PRODUCTOS"],

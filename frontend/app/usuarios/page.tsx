@@ -169,18 +169,24 @@ export default function SeguridadAccesosPage() {
 
   const permisosPorModulo = useMemo(() => {
     const grouped = new Map<string, Permiso[]>();
+
     for (const p of permisos) {
       if (!grouped.has(p.modulo)) grouped.set(p.modulo, []);
       grouped.get(p.modulo)?.push(p);
     }
-    return Array.from(grouped.entries()).sort((a, b) =>
-      a[0].localeCompare(b[0])
-    );
+
+    return Array.from(grouped.entries())
+      .map(([modulo, items]) => [
+        modulo,
+        [...items].sort((a, b) => a.codigo.localeCompare(b.codigo)),
+      ] as const)
+      .sort((a, b) => a[0].localeCompare(b[0]));
   }, [permisos]);
 
   const usuariosFiltrados = useMemo(() => {
     const t = qUsuarios.trim().toLowerCase();
     if (!t) return usuarios;
+
     return usuarios.filter((u) => {
       const rolesText = (u.usuarioRoles || [])
         .map((x) => `${x.rol?.codigo || ""} ${x.rol?.nombre || ""}`)
@@ -199,6 +205,7 @@ export default function SeguridadAccesosPage() {
   const rolesFiltrados = useMemo(() => {
     const t = qRoles.trim().toLowerCase();
     if (!t) return roles;
+
     return roles.filter((r) => {
       const permsText = (r.rolPermisos || [])
         .map((x) => x.permiso?.codigo || "")
@@ -217,6 +224,7 @@ export default function SeguridadAccesosPage() {
   const permisosFiltrados = useMemo(() => {
     const t = qPermisos.trim().toLowerCase();
     if (!t) return permisos;
+
     return permisos.filter((p) => {
       return (
         p.modulo.toLowerCase().includes(t) ||
@@ -259,6 +267,7 @@ export default function SeguridadAccesosPage() {
       setGuardando(true);
 
       const isEdit = !!usuarioActivo;
+
       const res = await fetch(
         `${getApiUrl()}/usuarios${isEdit ? `/${usuarioActivo!.id}` : ""}`,
         {
@@ -542,8 +551,8 @@ export default function SeguridadAccesosPage() {
                             </div>
                           </td>
                           <td className="px-4 py-3">
-                            <div className="flex max-w-[320px] flex-wrap gap-2">
-                              {(u.usuarioPermisos || []).slice(0, 5).map((x) => (
+                            <div className="flex max-w-[420px] flex-wrap gap-2">
+                              {(u.usuarioPermisos || []).slice(0, 8).map((x) => (
                                 <span
                                   key={x.permiso.id}
                                   className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700"
@@ -551,9 +560,9 @@ export default function SeguridadAccesosPage() {
                                   {x.permiso.codigo}
                                 </span>
                               ))}
-                              {(u.usuarioPermisos || []).length > 5 && (
+                              {(u.usuarioPermisos || []).length > 8 && (
                                 <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">
-                                  +{(u.usuarioPermisos || []).length - 5}
+                                  +{(u.usuarioPermisos || []).length - 8}
                                 </span>
                               )}
                             </div>
@@ -636,7 +645,7 @@ export default function SeguridadAccesosPage() {
                       </div>
 
                       <div className="mt-4 flex flex-wrap gap-2">
-                        {(rol.rolPermisos || []).slice(0, 8).map((x) => (
+                        {(rol.rolPermisos || []).slice(0, 10).map((x) => (
                           <span
                             key={x.permiso.id}
                             className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700"
@@ -644,9 +653,9 @@ export default function SeguridadAccesosPage() {
                             {x.permiso.codigo}
                           </span>
                         ))}
-                        {(rol.rolPermisos || []).length > 8 && (
+                        {(rol.rolPermisos || []).length > 10 && (
                           <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">
-                            +{(rol.rolPermisos || []).length - 8}
+                            +{(rol.rolPermisos || []).length - 10}
                           </span>
                         )}
                       </div>

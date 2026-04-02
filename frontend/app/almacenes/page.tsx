@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useAuth } from "../components/auth/AuthProvider";
 
 type Almacen = {
   id: string;
@@ -42,6 +43,7 @@ function formatFecha(v?: string) {
 
 export default function AlmacenesPage() {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  const { can } = useAuth();
 
   const [almacenes, setAlmacenes] = useState<Almacen[]>([]);
   const [loading, setLoading] = useState(true);
@@ -106,12 +108,14 @@ export default function AlmacenesPage() {
   }, [apiUrl, q, estadoFiltro]);
 
   useEffect(() => {
-    void cargarAlmacenes();
-  }, [cargarAlmacenes]);
+    if (can("almacenes.ver")) {
+      void cargarAlmacenes();
+    } else {
+      setLoading(false);
+    }
+  }, [cargarAlmacenes, can]);
 
-  const almacenesFiltrados = useMemo(() => {
-    return almacenes;
-  }, [almacenes]);
+  const almacenesFiltrados = useMemo(() => almacenes, [almacenes]);
 
   const totalPaginas = Math.max(
     1,
@@ -318,6 +322,17 @@ export default function AlmacenesPage() {
     );
   }
 
+  if (!can("almacenes.ver")) {
+    return (
+      <div className="rounded-3xl bg-white p-6 shadow-sm">
+        <h1 className="text-2xl font-black text-slate-900">Almacenes</h1>
+        <p className="mt-2 text-sm text-slate-500">
+          No tienes permiso para ver esta sección.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <section className="rounded-3xl bg-white p-6 shadow-sm">
@@ -329,12 +344,14 @@ export default function AlmacenesPage() {
             </p>
           </div>
 
-          <button
-            onClick={abrirModalCrear}
-            className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-          >
-            + Nuevo almacén
-          </button>
+          {can("almacenes.crear") && (
+            <button
+              onClick={abrirModalCrear}
+              className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+            >
+              + Nuevo almacén
+            </button>
+          )}
         </div>
 
         <div className="mb-4 grid gap-3 md:grid-cols-3">
@@ -394,28 +411,32 @@ export default function AlmacenesPage() {
                       <td className="px-4 py-3">{formatFecha(almacen.updatedAt)}</td>
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap gap-2">
-                          <button
-                            onClick={() => abrirModalEditar(almacen)}
-                            className="rounded-lg border border-blue-300 px-3 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-50"
-                          >
-                            Editar
-                          </button>
+                          {can("almacenes.editar") && (
+                            <button
+                              onClick={() => abrirModalEditar(almacen)}
+                              className="rounded-lg border border-blue-300 px-3 py-1 text-xs font-semibold text-blue-700 hover:bg-blue-50"
+                            >
+                              Editar
+                            </button>
+                          )}
 
-                          <button
-                            onClick={() => toggleActivo(almacen)}
-                            disabled={cambiandoEstadoId === almacen.id}
-                            className={`rounded-lg px-3 py-1 text-xs font-semibold ${
-                              almacen.activo
-                                ? "border border-red-300 text-red-700 hover:bg-red-50"
-                                : "border border-emerald-300 text-emerald-700 hover:bg-emerald-50"
-                            } disabled:opacity-60`}
-                          >
-                            {cambiandoEstadoId === almacen.id
-                              ? "Procesando..."
-                              : almacen.activo
-                              ? "Desactivar"
-                              : "Activar"}
-                          </button>
+                          {can("almacenes.estado") && (
+                            <button
+                              onClick={() => toggleActivo(almacen)}
+                              disabled={cambiandoEstadoId === almacen.id}
+                              className={`rounded-lg px-3 py-1 text-xs font-semibold ${
+                                almacen.activo
+                                  ? "border border-red-300 text-red-700 hover:bg-red-50"
+                                  : "border border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                              } disabled:opacity-60`}
+                            >
+                              {cambiandoEstadoId === almacen.id
+                                ? "Procesando..."
+                                : almacen.activo
+                                ? "Desactivar"
+                                : "Activar"}
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
