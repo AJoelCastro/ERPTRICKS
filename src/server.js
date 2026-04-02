@@ -32,7 +32,8 @@ const app = express();
 app.use(cors({
   origin: [
     "https://erptricks.tricks.pe",
-    "https://www.tricks.pe"
+    "https://www.tricks.pe",
+    "http://localhost:3000",
   ],
   credentials: true
 }));
@@ -83,7 +84,7 @@ app.use("/produccion", produccionRoutes);
 app.use("/proveedores", proveedoresRoutes);
 app.use("/compras", comprasRoutes);
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 3001;
 
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en http://localhost:${PORT}`);
