@@ -22,6 +22,7 @@ import {
   KeyRound,
   LogOut,
   UserCog,
+  Warehouse,
 } from "lucide-react";
 import "./globals.css";
 import { AuthProvider, useAuth } from "./components/auth/AuthProvider";
@@ -41,7 +42,7 @@ const COMPANY_LOGO = "/logo-empresa.svg";
 
 const menuItems: MenuItem[] = [
   { label: "Dashboard", href: "/", icon: LayoutDashboard, permissions: ["dashboard.ver"] },
-  { label: "Almacenes", href: "/almacenes", icon: Boxes, permissions: ["almacenes.ver"] },
+  { label: "Almacenes", href: "/almacenes", icon: Warehouse, permissions: ["almacenes.ver"] },
   { label: "Productos", href: "/productos", icon: ShoppingBag, permissions: ["productos.ver"] },
   { label: "Inventario", href: "/inventario", icon: Package, permissions: ["inventario.ver"] },
   { label: "Clientes", href: "/clientes", icon: Users, permissions: ["clientes.ver"] },
