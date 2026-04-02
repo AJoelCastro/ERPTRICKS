@@ -29,7 +29,13 @@ const prisma = require("./lib/prisma");
 
 const app = express();
 
-app.use(cors());
+app.use(cors({
+  origin: [
+    "https://erptricks.tricks.pe",
+    "https://www.tricks.pe"
+  ],
+  credentials: true
+}));
 app.use(express.json());
 
 app.locals.prisma = prisma;
