@@ -22,6 +22,8 @@ type Almacen = {
   codigo: string;
   nombre: string;
   activo: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 type InventarioItem = {
@@ -151,8 +153,11 @@ export default function InventarioPage() {
 
   const [items, setItems] = useState<InventarioItem[]>([]);
   const [movimientos, setMovimientos] = useState<MovimientoInventario[]>([]);
+  const [almacenes, setAlmacenes] = useState<Almacen[]>([]);
+
   const [loadingInventario, setLoadingInventario] = useState(true);
   const [loadingMovimientos, setLoadingMovimientos] = useState(true);
+  const [loadingAlmacenes, setLoadingAlmacenes] = useState(true);
 
   const [q, setQ] = useState("");
   const [almacenFiltro, setAlmacenFiltro] = useState("");
@@ -191,6 +196,13 @@ export default function InventarioPage() {
   const [scannerMovimiento, setScannerMovimiento] =
     useState<MovimientoForm>(initialScannerMovimiento);
   const [camaraActiva, setCamaraActiva] = useState(false);
+
+  const [almacenModalOpen, setAlmacenModalOpen] = useState(false);
+  const [guardandoAlmacen, setGuardandoAlmacen] = useState(false);
+  const [almacenForm, setAlmacenForm] = useState({
+    codigo: "",
+    nombre: "",
+  });
 
   const scannerInputRef = useRef<HTMLInputElement | null>(null);
   const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
@@ -262,6 +274,35 @@ export default function InventarioPage() {
     }
   }, [apiUrl, movQ, movTipoFiltro, movAlmacenFiltro, movFechaDesde, movFechaHasta]);
 
+  const cargarAlmacenes = useCallback(async () => {
+    if (!apiUrl) {
+      setLoadingAlmacenes(false);
+      return;
+    }
+
+    try {
+      setLoadingAlmacenes(true);
+
+      const res = await fetch(`${apiUrl}/almacenes`);
+      const data = await readJsonSafe<ApiSuccessResponse<Almacen[]>>(res);
+
+      if (!res.ok || !data.ok) {
+        throw new Error(data.error || "No se pudieron cargar los almacenes");
+      }
+
+      setAlmacenes((data.data || []).filter((a) => a.activo));
+    } catch (error) {
+      console.error("Error cargando almacenes:", error);
+      alert(
+        error instanceof Error
+          ? error.message
+          : "No se pudieron cargar los almacenes"
+      );
+    } finally {
+      setLoadingAlmacenes(false);
+    }
+  }, [apiUrl]);
+
   useEffect(() => {
     void cargarInventario();
   }, [cargarInventario]);
@@ -270,13 +311,11 @@ export default function InventarioPage() {
     void cargarMovimientos();
   }, [cargarMovimientos]);
 
-  const almacenesUnicos = useMemo(() => {
-    const map = new Map<string, Almacen>();
-    items.forEach((x) => {
-      if (x.almacen?.id) map.set(x.almacen.id, x.almacen);
-    });
-    return Array.from(map.values());
-  }, [items]);
+  useEffect(() => {
+    void cargarAlmacenes();
+  }, [cargarAlmacenes]);
+
+  const almacenesUnicos = useMemo(() => almacenes, [almacenes]);
 
   const itemsFiltrados = useMemo(() => {
     const texto = q.toLowerCase();
@@ -825,6 +864,72 @@ export default function InventarioPage() {
     };
   }, [scannerOpen, scannerMode, iniciarScannerCamara, detenerScannerCamara]);
 
+  function abrirModalAlmacen() {
+    setAlmacenForm({
+      codigo: "",
+      nombre: "",
+    });
+    setAlmacenModalOpen(true);
+  }
+
+  function cerrarModalAlmacen() {
+    if (guardandoAlmacen) return;
+    setAlmacenModalOpen(false);
+    setAlmacenForm({
+      codigo: "",
+      nombre: "",
+    });
+  }
+
+  function updateAlmacenForm<K extends keyof typeof almacenForm>(
+    key: K,
+    value: (typeof almacenForm)[K]
+  ) {
+    setAlmacenForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  async function guardarAlmacen(e: React.FormEvent) {
+    e.preventDefault();
+    if (!apiUrl) return;
+
+    try {
+      setGuardandoAlmacen(true);
+
+      const payload = {
+        codigo: almacenForm.codigo.trim().toUpperCase(),
+        nombre: almacenForm.nombre.trim(),
+      };
+
+      const res = await fetch(`${apiUrl}/almacenes`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await readJsonSafe<ApiSuccessResponse<Almacen>>(res);
+
+      if (!res.ok || !data.ok) {
+        alert(data.error || "No se pudo crear el almacén");
+        return;
+      }
+
+      await cargarAlmacenes();
+      cerrarModalAlmacen();
+      alert("Almacén creado correctamente");
+    } catch (error) {
+      console.error(error);
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Ocurrió un error al crear el almacén"
+      );
+    } finally {
+      setGuardandoAlmacen(false);
+    }
+  }
+
   function badgeEstado(estado: string) {
     return estado === "ACTIVO" ? (
       <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">
@@ -896,6 +1001,13 @@ export default function InventarioPage() {
 
           <div className="flex flex-wrap gap-2">
             <button
+              onClick={abrirModalAlmacen}
+              className="rounded-xl border border-blue-300 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50"
+            >
+              + Almacén
+            </button>
+
+            <button
               onClick={abrirScanner}
               className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
             >
@@ -917,7 +1029,9 @@ export default function InventarioPage() {
             onChange={(e) => setAlmacenFiltro(e.target.value)}
             className="rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-blue-500"
           >
-            <option value="">Todos los almacenes</option>
+            <option value="">
+              {loadingAlmacenes ? "Cargando almacenes..." : "Todos los almacenes"}
+            </option>
             {almacenesUnicos.map((a) => (
               <option key={a.id} value={a.id}>
                 {a.codigo} - {a.nombre}
@@ -1152,7 +1266,9 @@ export default function InventarioPage() {
             onChange={(e) => setMovAlmacenFiltro(e.target.value)}
             className="rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-blue-500"
           >
-            <option value="">Todos los almacenes</option>
+            <option value="">
+              {loadingAlmacenes ? "Cargando almacenes..." : "Todos los almacenes"}
+            </option>
             {almacenesUnicos.map((a) => (
               <option key={a.id} value={a.id}>
                 {a.codigo} - {a.nombre}
@@ -1692,6 +1808,76 @@ export default function InventarioPage() {
                 </form>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {almacenModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-xl">
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-black text-slate-900">
+                  Crear almacén
+                </h2>
+                <p className="text-sm text-slate-500">
+                  Registra un nuevo almacén para tu inventario
+                </p>
+              </div>
+
+              <button
+                onClick={cerrarModalAlmacen}
+                className="rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+              >
+                Cerrar
+              </button>
+            </div>
+
+            <form onSubmit={guardarAlmacen} className="space-y-4">
+              <div>
+                <label className="mb-1 block text-sm font-semibold text-slate-700">
+                  Código
+                </label>
+                <input
+                  value={almacenForm.codigo}
+                  onChange={(e) => updateAlmacenForm("codigo", e.target.value)}
+                  className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm uppercase outline-none focus:border-blue-500"
+                  placeholder="Ejemplo: ALM-01"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-semibold text-slate-700">
+                  Nombre
+                </label>
+                <input
+                  value={almacenForm.nombre}
+                  onChange={(e) => updateAlmacenForm("nombre", e.target.value)}
+                  className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-blue-500"
+                  placeholder="Ejemplo: Almacén Principal"
+                  required
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={cerrarModalAlmacen}
+                  className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+                >
+                  Cancelar
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={guardandoAlmacen}
+                  className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
+                >
+                  {guardandoAlmacen ? "Guardando..." : "Crear almacén"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
