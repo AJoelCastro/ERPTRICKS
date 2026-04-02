@@ -44,7 +44,7 @@ app.locals.prisma = prisma;
 app.get("/", (req, res) => {
   res.json({
     ok: true,
-    message: "ERP TRICKS S.A.C funcionando 🚀",
+    message: "ERP TRICKS S.A.C funcionandoooo en nube 🚀",
   });
 });
 
