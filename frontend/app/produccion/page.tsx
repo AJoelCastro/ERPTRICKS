@@ -863,7 +863,6 @@ async function generarEtiquetaCajaPDF(orden: OrdenProduccion) {
     alert("No se pudieron generar las etiquetas por caja");
   }
 }
-
   async function generarEtiquetaGeneralOP(orden: OrdenProduccion) {
     try {
       const width = mmToPt(100);

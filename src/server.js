@@ -77,7 +77,7 @@ app.use("/produccion", produccionRoutes);
 app.use("/proveedores", proveedoresRoutes);
 app.use("/compras", comprasRoutes);
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || "https://api.tricks.pe";
 
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en http://localhost:${PORT}`);
