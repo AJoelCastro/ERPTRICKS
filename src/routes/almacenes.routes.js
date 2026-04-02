@@ -16,8 +16,6 @@ function normalizarBoolean(valor) {
 
 router.get(
   "/",
-  authMiddleware,
-  requirePermission("almacenes.ver"),
   async (req, res) => {
     try {
       const prisma = req.app.locals.prisma;
@@ -67,8 +65,6 @@ router.get(
 
 router.get(
   "/:id",
-  authMiddleware,
-  requirePermission("almacenes.ver"),
   async (req, res) => {
     try {
       const prisma = req.app.locals.prisma;
@@ -100,8 +96,6 @@ router.get(
 
 router.post(
   "/",
-  authMiddleware,
-  requirePermission("almacenes.crear"),
   async (req, res) => {
     try {
       const prisma = req.app.locals.prisma;
@@ -144,8 +138,6 @@ router.post(
 
 router.put(
   "/:id",
-  authMiddleware,
-  requirePermission("almacenes.editar"),
   async (req, res) => {
     try {
       const prisma = req.app.locals.prisma;
@@ -200,8 +192,6 @@ router.put(
 
 router.patch(
   "/:id/estado",
-  authMiddleware,
-  requirePermission("almacenes.estado"),
   async (req, res) => {
     try {
       const prisma = req.app.locals.prisma;
