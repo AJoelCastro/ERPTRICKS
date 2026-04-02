@@ -12,7 +12,55 @@ type SimpleItem = {
   estadoGeneral?: string;
   etapaActual?: string;
   modelo?: string;
+  activo?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 };
+
+type ApiResponse<T> = {
+  ok?: boolean;
+  data?: T;
+  error?: string;
+};
+
+async function readJsonSafe<T>(res: Response): Promise<T> {
+  const text = await res.text();
+
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    throw new Error(
+      text?.includes("<!DOCTYPE")
+        ? "El backend respondió HTML en vez de JSON. Verifica que el backend esté reiniciado."
+        : text || "La respuesta del servidor no es JSON válido"
+    );
+  }
+}
+
+function formatFecha(v?: string) {
+  if (!v) return "-";
+  try {
+    return new Date(v).toLocaleString("es-PE");
+  } catch {
+    return v;
+  }
+}
+
+function badgeActivo(activo?: boolean) {
+  if (activo) {
+    return (
+      <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">
+        ACTIVO
+      </span>
+    );
+  }
+
+  return (
+    <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-bold text-red-700">
+      INACTIVO
+    </span>
+  );
+}
 
 export default function HomePage() {
   const [backendStatus, setBackendStatus] = useState("Probando conexión...");
@@ -30,9 +78,14 @@ export default function HomePage() {
 
   useEffect(() => {
     async function cargarDatos() {
+      if (!apiUrl) {
+        setBackendStatus("NEXT_PUBLIC_API_URL no configurado");
+        return;
+      }
+
       try {
         const r = await fetch(`${apiUrl}/`);
-        const data = await r.json();
+        const data = await readJsonSafe<ApiResponse<unknown>>(r);
 
         if (data.ok) {
           setBackendStatus("Conectado");
@@ -66,15 +119,24 @@ export default function HomePage() {
           fetch(`${apiUrl}/compras`),
         ]);
 
-        const almacenesData = await almacenesRes.json();
-        const clientesData = await clientesRes.json();
-        const productosData = await productosRes.json();
-        const pedidosData = await pedidosRes.json();
-        const ventasData = await ventasRes.json();
-        const cajasData = await cajasRes.json();
-        const produccionData = await produccionRes.json();
-        const proveedoresData = await proveedoresRes.json();
-        const comprasData = await comprasRes.json();
+        const almacenesData =
+          await readJsonSafe<ApiResponse<SimpleItem[]>>(almacenesRes);
+        const clientesData =
+          await readJsonSafe<ApiResponse<SimpleItem[]>>(clientesRes);
+        const productosData =
+          await readJsonSafe<ApiResponse<SimpleItem[]>>(productosRes);
+        const pedidosData =
+          await readJsonSafe<ApiResponse<SimpleItem[]>>(pedidosRes);
+        const ventasData =
+          await readJsonSafe<ApiResponse<SimpleItem[]>>(ventasRes);
+        const cajasData =
+          await readJsonSafe<ApiResponse<SimpleItem[]>>(cajasRes);
+        const produccionData =
+          await readJsonSafe<ApiResponse<SimpleItem[]>>(produccionRes);
+        const proveedoresData =
+          await readJsonSafe<ApiResponse<SimpleItem[]>>(proveedoresRes);
+        const comprasData =
+          await readJsonSafe<ApiResponse<SimpleItem[]>>(comprasRes);
 
         setAlmacenes(almacenesData.data || []);
         setClientes(clientesData.data || []);
@@ -90,7 +152,7 @@ export default function HomePage() {
       }
     }
 
-    cargarDatos();
+    void cargarDatos();
   }, [apiUrl]);
 
   const cards = [
@@ -133,9 +195,47 @@ export default function HomePage() {
         ))}
       </section>
 
-      <section className="grid gap-6 xl:grid-cols-2">
+      <section className="grid gap-6 xl:grid-cols-3">
+        <div className="rounded-3xl bg-white p-6 shadow-sm">
+          <h3 className="text-xl font-black text-slate-900">
+            Últimos almacenes
+          </h3>
+
+          <div className="mt-4 space-y-3">
+            {almacenes.length === 0 ? (
+              <p className="text-sm text-slate-500">
+                No hay almacenes registrados.
+              </p>
+            ) : (
+              almacenes.slice(0, 5).map((almacen) => (
+                <div
+                  key={almacen.id}
+                  className="rounded-2xl border border-slate-200 p-4"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="font-bold text-slate-900">
+                        {almacen.codigo || "-"}
+                      </div>
+                      <div className="mt-1 text-sm text-slate-600">
+                        Nombre: {almacen.nombre || "-"}
+                      </div>
+                      <div className="text-sm text-slate-600">
+                        Creado: {formatFecha(almacen.createdAt)}
+                      </div>
+                    </div>
+
+                    <div>{badgeActivo(almacen.activo)}</div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
         <div className="rounded-3xl bg-white p-6 shadow-sm">
           <h3 className="text-xl font-black text-slate-900">Últimos pedidos</h3>
+
           <div className="mt-4 space-y-3">
             {pedidos.length === 0 ? (
               <p className="text-sm text-slate-500">No hay pedidos aún.</p>
@@ -145,15 +245,17 @@ export default function HomePage() {
                   key={pedido.id}
                   className="rounded-2xl border border-slate-200 p-4"
                 >
-                  <div className="font-bold text-slate-900">{pedido.codigo}</div>
+                  <div className="font-bold text-slate-900">
+                    {pedido.codigo || "-"}
+                  </div>
                   <div className="mt-1 text-sm text-slate-600">
-                    Estado pedido: {pedido.estadoPedido}
+                    Estado pedido: {pedido.estadoPedido || "-"}
                   </div>
                   <div className="text-sm text-slate-600">
-                    Estado entrega: {pedido.estadoEntrega}
+                    Estado entrega: {pedido.estadoEntrega || "-"}
                   </div>
                   <div className="text-sm text-slate-600">
-                    Total: S/ {pedido.total}
+                    Total: S/ {pedido.total ?? 0}
                   </div>
                 </div>
               ))
@@ -165,6 +267,7 @@ export default function HomePage() {
           <h3 className="text-xl font-black text-slate-900">
             Últimas órdenes de producción
           </h3>
+
           <div className="mt-4 space-y-3">
             {produccion.length === 0 ? (
               <p className="text-sm text-slate-500">
@@ -176,15 +279,17 @@ export default function HomePage() {
                   key={op.id}
                   className="rounded-2xl border border-slate-200 p-4"
                 >
-                  <div className="font-bold text-slate-900">{op.codigo}</div>
+                  <div className="font-bold text-slate-900">
+                    {op.codigo || "-"}
+                  </div>
                   <div className="mt-1 text-sm text-slate-600">
-                    Modelo: {op.modelo}
+                    Modelo: {op.modelo || "-"}
                   </div>
                   <div className="text-sm text-slate-600">
-                    Etapa actual: {op.etapaActual}
+                    Etapa actual: {op.etapaActual || "-"}
                   </div>
                   <div className="text-sm text-slate-600">
-                    Estado: {op.estadoGeneral}
+                    Estado: {op.estadoGeneral || "-"}
                   </div>
                 </div>
               ))
