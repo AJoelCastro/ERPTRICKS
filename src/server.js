@@ -33,7 +33,6 @@ app.use(cors({
   origin: [
     "https://erptricks.tricks.pe",
     "https://www.tricks.pe",
-    "http://localhost:3000",
   ],
   credentials: true
 }));
