@@ -20,7 +20,7 @@ const proveedoresRoutes = require("./routes/proveedores.routes");
 const comprasRoutes = require("./routes/compras.routes");
 const materialesRoutes = require("./routes/materiales.routes");
 const insumosRoutes = require("./routes/insumos.routes");
-
+const notificacionesYapeRoutes = require("./routes/notificaciones-yape.routes");
 
 // AUTH / SEGURIDAD
 const authRoutes = require("./routes/auth.routes");
@@ -33,10 +33,7 @@ const prisma = require("./lib/prisma");
 const app = express();
 
 app.use(cors({
-  origin: [
-    "https://erptricks.tricks.pe",
-    "https://www.tricks.pe",
-  ],
+  origin: true,
   credentials: true
 }));
 app.use(express.json());
@@ -87,6 +84,7 @@ app.use("/proveedores", proveedoresRoutes);
 app.use("/compras", comprasRoutes);
 app.use("/materiales", materialesRoutes);
 app.use("/insumos", insumosRoutes);
+app.use("/notificaciones-yape", notificacionesYapeRoutes);
 
 const PORT = process.env.PORT || 3001;
 
