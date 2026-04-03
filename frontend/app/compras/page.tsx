@@ -29,6 +29,8 @@ type Almacen = {
   activo?: boolean;
 };
 
+type TipoItemCompra = "PRODUCTO" | "MATERIAL" | "INSUMO";
+
 type Producto = {
   id: string;
   codigo: string;
@@ -43,15 +45,34 @@ type Producto = {
   estado: string;
 };
 
+type CatalogoCompraItem = {
+  tipoItem: TipoItemCompra;
+  itemId: string;
+  productoId?: string | null;
+  codigo: string;
+  nombre: string;
+  descripcion: string;
+  unidadMedida?: string | null;
+  costoReferencial: string | number;
+  precioReferencial?: string | number | null;
+  estado?: string;
+  raw?: Producto | Record<string, unknown>;
+};
+
 type DetalleCompra = {
   id?: string;
   compraId?: string;
-  productoId: string;
+  tipoItem: TipoItemCompra;
+  itemId?: string | null;
+  productoId?: string | null;
+  codigoItem: string;
+  descripcionItem: string;
+  unidadMedida?: string | null;
   cantidad: number;
   costoUnitario: string | number;
   subtotal: string | number;
   observaciones?: string | null;
-  producto?: Producto;
+  producto?: Producto | null;
 };
 
 type HistorialCompra = {
@@ -93,8 +114,13 @@ type Compra = {
 
 type CompraFormLine = {
   uid: string;
-  productoId: string;
-  productoTexto: string;
+  tipoItem: TipoItemCompra;
+  itemId: string;
+  productoId?: string;
+  itemTexto: string;
+  codigoItem: string;
+  descripcionItem: string;
+  unidadMedida: string;
   cantidad: string;
   costoUnitario: string;
   observaciones: string;
@@ -115,6 +141,14 @@ type JsPDFWithAutoTable = jsPDF & {
   lastAutoTable?: {
     finalY?: number;
   };
+};
+
+type ItemRapidoForm = {
+  codigo: string;
+  nombre: string;
+  descripcion: string;
+  unidadMedida: string;
+  costoReferencial: string;
 };
 
 function uid() {
@@ -163,16 +197,86 @@ function getProveedorDocumento(p: Proveedor) {
   return p.tipoProveedor === "PERSONA_JURIDICA" ? p.ruc || "-" : p.dni || "-";
 }
 
+function getTipoItemLabel(tipo: TipoItemCompra) {
+  if (tipo === "PRODUCTO") return "Producto";
+  if (tipo === "MATERIAL") return "Material";
+  return "Insumo";
+}
+
+function badgeTipoItem(tipo: TipoItemCompra) {
+  const map: Record<TipoItemCompra, string> = {
+    PRODUCTO: "bg-blue-100 text-blue-700",
+    MATERIAL: "bg-amber-100 text-amber-700",
+    INSUMO: "bg-violet-100 text-violet-700",
+  };
+
+  return (
+    <span
+      className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-bold ${map[tipo]}`}
+    >
+      {getTipoItemLabel(tipo)}
+    </span>
+  );
+}
+
+function createEmptyLine(): CompraFormLine {
+  return {
+    uid: uid(),
+    tipoItem: "PRODUCTO",
+    itemId: "",
+    productoId: "",
+    itemTexto: "",
+    codigoItem: "",
+    descripcionItem: "",
+    unidadMedida: "UND",
+    cantidad: "1",
+    costoUnitario: "0",
+    observaciones: "",
+  };
+}
+
+function createEmptyItemForm(): ItemRapidoForm {
+  return {
+    codigo: "",
+    nombre: "",
+    descripcion: "",
+    unidadMedida: "UND",
+    costoReferencial: "0",
+  };
+}
+
+function slugFromText(text: string) {
+  return String(text || "")
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function generarCodigoRapido(prefijo: "MAT" | "INS", nombre: string) {
+  const base = slugFromText(nombre).slice(0, 10) || "ITEM";
+  const stamp = Date.now().toString().slice(-5);
+  return `${prefijo}-${base}-${stamp}`;
+}
+
+function classBotonSecundario(color: "amber" | "violet") {
+  if (color === "amber") {
+    return "border-amber-300 text-amber-700 hover:bg-amber-50";
+  }
+  return "border-violet-300 text-violet-700 hover:bg-violet-50";
+}
+
 export default function ComprasPage() {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
   const [compras, setCompras] = useState<Compra[]>([]);
   const [proveedores, setProveedores] = useState<Proveedor[]>([]);
-  const [productos, setProductos] = useState<Producto[]>([]);
+  const [catalogoItems, setCatalogoItems] = useState<CatalogoCompraItem[]>([]);
   const [almacenes, setAlmacenes] = useState<Almacen[]>([]);
 
   const [loading, setLoading] = useState(true);
   const [procesando, setProcesando] = useState(false);
+  const [guardandoItemRapido, setGuardandoItemRapido] = useState(false);
 
   const [q, setQ] = useState("");
   const [proveedorFiltro, setProveedorFiltro] = useState("");
@@ -189,6 +293,16 @@ export default function ComprasPage() {
   const [detalleOpen, setDetalleOpen] = useState(false);
   const [compraActiva, setCompraActiva] = useState<Compra | null>(null);
 
+  const [modalMaterial, setModalMaterial] = useState(false);
+  const [modalInsumo, setModalInsumo] = useState(false);
+
+  const [formMaterial, setFormMaterial] = useState<ItemRapidoForm>(
+    createEmptyItemForm()
+  );
+  const [formInsumo, setFormInsumo] = useState<ItemRapidoForm>(
+    createEmptyItemForm()
+  );
+
   const [proveedorBusqueda, setProveedorBusqueda] = useState("");
   const [proveedorSeleccionado, setProveedorSeleccionado] =
     useState<Proveedor | null>(null);
@@ -201,20 +315,11 @@ export default function ComprasPage() {
   const [descuento, setDescuento] = useState("0");
   const [observaciones, setObservaciones] = useState("");
 
-  const [detalle, setDetalle] = useState<CompraFormLine[]>([
-    {
-      uid: uid(),
-      productoId: "",
-      productoTexto: "",
-      cantidad: "1",
-      costoUnitario: "0",
-      observaciones: "",
-    },
-  ]);
+  const [detalle, setDetalle] = useState<CompraFormLine[]>([createEmptyLine()]);
 
-  const [productoSearchByLine, setProductoSearchByLine] = useState<
-    Record<string, string>
-  >({});
+  const [itemSearchByLine, setItemSearchByLine] = useState<Record<string, string>>(
+    {}
+  );
 
   const [pagoMonto, setPagoMonto] = useState("0");
   const [pagoMetodo, setPagoMetodo] = useState("EFECTIVO");
@@ -224,17 +329,17 @@ export default function ComprasPage() {
     try {
       setLoading(true);
 
-      const [comprasRes, proveedoresRes, productosRes, almacenesRes] =
+      const [comprasRes, proveedoresRes, catalogoItemsRes, almacenesRes] =
         await Promise.all([
           fetch(`${apiUrl}/compras`),
           fetch(`${apiUrl}/proveedores`),
-          fetch(`${apiUrl}/productos`),
+          fetch(`${apiUrl}/compras/catalogo-items`),
           fetch(`${apiUrl}/almacenes`),
         ]);
 
       const comprasData = await readJsonSafe(comprasRes);
       const proveedoresData = await readJsonSafe(proveedoresRes);
-      const productosData = await readJsonSafe(productosRes);
+      const catalogoData = await readJsonSafe(catalogoItemsRes);
       const almacenesData = await readJsonSafe(almacenesRes);
 
       setCompras(comprasData.data || []);
@@ -243,9 +348,7 @@ export default function ComprasPage() {
           (p: Proveedor) => p.estado === "ACTIVO"
         )
       );
-      setProductos(
-        (productosData.data || []).filter((p: Producto) => p.estado === "ACTIVO")
-      );
+      setCatalogoItems(catalogoData.data || []);
       setAlmacenes(almacenesData.data || []);
 
       if (!almacenId && (almacenesData.data || []).length > 0) {
@@ -273,22 +376,41 @@ export default function ComprasPage() {
     setAdelanto("0");
     setDescuento("0");
     setObservaciones("");
-    setDetalle([
-      {
-        uid: uid(),
-        productoId: "",
-        productoTexto: "",
-        cantidad: "1",
-        costoUnitario: "0",
-        observaciones: "",
-      },
-    ]);
-    setProductoSearchByLine({});
+    setDetalle([createEmptyLine()]);
+    setItemSearchByLine({});
   }
 
   function abrirNuevaCompra() {
     resetFormulario();
     setModalNueva(true);
+  }
+
+  function abrirModalMaterial() {
+    setFormMaterial({
+      ...createEmptyItemForm(),
+      codigo: generarCodigoRapido("MAT", ""),
+    });
+    setModalMaterial(true);
+  }
+
+  function abrirModalInsumo() {
+    setFormInsumo({
+      ...createEmptyItemForm(),
+      codigo: generarCodigoRapido("INS", ""),
+    });
+    setModalInsumo(true);
+  }
+
+  function cerrarModalMaterial() {
+    if (guardandoItemRapido) return;
+    setModalMaterial(false);
+    setFormMaterial(createEmptyItemForm());
+  }
+
+  function cerrarModalInsumo() {
+    if (guardandoItemRapido) return;
+    setModalInsumo(false);
+    setFormInsumo(createEmptyItemForm());
   }
 
   const proveedoresFiltrados = useMemo(() => {
@@ -299,63 +421,47 @@ export default function ComprasPage() {
       .filter((p) => {
         return (
           p.codigo.toLowerCase().includes(t) ||
-          String(p.dni || "")
-            .toLowerCase()
-            .includes(t) ||
-          String(p.ruc || "")
-            .toLowerCase()
-            .includes(t) ||
-          String(p.nombres || "")
-            .toLowerCase()
-            .includes(t) ||
-          String(p.apellidos || "")
-            .toLowerCase()
-            .includes(t) ||
-          String(p.razonSocial || "")
-            .toLowerCase()
-            .includes(t) ||
-          String(p.telefono || "")
-            .toLowerCase()
-            .includes(t)
+          String(p.dni || "").toLowerCase().includes(t) ||
+          String(p.ruc || "").toLowerCase().includes(t) ||
+          String(p.nombres || "").toLowerCase().includes(t) ||
+          String(p.apellidos || "").toLowerCase().includes(t) ||
+          String(p.razonSocial || "").toLowerCase().includes(t) ||
+          String(p.telefono || "").toLowerCase().includes(t)
         );
       })
       .slice(0, 8);
   }, [proveedores, proveedorBusqueda]);
 
-  function productosFiltradosLinea(lineUid: string) {
-    const t = (productoSearchByLine[lineUid] || "").trim().toLowerCase();
-    if (!t) return productos.slice(0, 8);
+  function itemsFiltradosLinea(lineUid: string, tipoItem: TipoItemCompra) {
+    const t = (itemSearchByLine[lineUid] || "").trim().toLowerCase();
 
-    return productos
-      .filter((p) => {
+    const itemsDelTipo = catalogoItems.filter((x) => x.tipoItem === tipoItem);
+
+    if (!t) return itemsDelTipo.slice(0, 8);
+
+    return itemsDelTipo
+      .filter((item) => {
         return (
-          p.codigo.toLowerCase().includes(t) ||
-          p.modelo.toLowerCase().includes(t) ||
-          p.color.toLowerCase().includes(t) ||
-          p.material.toLowerCase().includes(t) ||
-          p.taco.toLowerCase().includes(t) ||
-          String(p.talla).includes(t)
+          item.codigo.toLowerCase().includes(t) ||
+          item.nombre.toLowerCase().includes(t) ||
+          item.descripcion.toLowerCase().includes(t) ||
+          String(item.unidadMedida || "").toLowerCase().includes(t)
         );
       })
       .slice(0, 8);
   }
 
   function agregarLinea() {
-    setDetalle((prev) => [
-      ...prev,
-      {
-        uid: uid(),
-        productoId: "",
-        productoTexto: "",
-        cantidad: "1",
-        costoUnitario: "0",
-        observaciones: "",
-      },
-    ]);
+    setDetalle((prev) => [...prev, createEmptyLine()]);
   }
 
   function eliminarLinea(uidLine: string) {
     setDetalle((prev) => prev.filter((x) => x.uid !== uidLine));
+    setItemSearchByLine((prev) => {
+      const clone = { ...prev };
+      delete clone[uidLine];
+      return clone;
+    });
   }
 
   function updateLinea(uidLine: string, field: keyof CompraFormLine, value: string) {
@@ -366,24 +472,148 @@ export default function ComprasPage() {
     );
   }
 
-  function seleccionarProducto(uidLine: string, producto: Producto) {
+  function cambiarTipoLinea(uidLine: string, tipoItem: TipoItemCompra) {
     setDetalle((prev) =>
       prev.map((line) =>
         line.uid === uidLine
           ? {
               ...line,
-              productoId: producto.id,
-              productoTexto: `${producto.codigo} - ${producto.modelo} - ${producto.color} - ${producto.material} - ${producto.taco} - T${producto.talla}`,
-              costoUnitario: String(Number(producto.costo || 0)),
+              tipoItem,
+              itemId: "",
+              productoId: "",
+              itemTexto: "",
+              codigoItem: "",
+              descripcionItem: "",
+              unidadMedida: "UND",
+              costoUnitario: "0",
             }
           : line
       )
     );
 
-    setProductoSearchByLine((prev) => ({
+    setItemSearchByLine((prev) => ({
       ...prev,
-      [uidLine]: `${producto.codigo} ${producto.modelo}`,
+      [uidLine]: "",
     }));
+  }
+
+  function seleccionarItem(uidLine: string, item: CatalogoCompraItem) {
+    setDetalle((prev) =>
+      prev.map((line) =>
+        line.uid === uidLine
+          ? {
+              ...line,
+              tipoItem: item.tipoItem,
+              itemId: item.itemId,
+              productoId:
+                item.tipoItem === "PRODUCTO" ? item.productoId || item.itemId : "",
+              itemTexto: `${item.codigo} - ${item.descripcion}`,
+              codigoItem: item.codigo,
+              descripcionItem: item.descripcion,
+              unidadMedida: item.unidadMedida || "UND",
+              costoUnitario: String(Number(item.costoReferencial || 0)),
+            }
+          : line
+      )
+    );
+
+    setItemSearchByLine((prev) => ({
+      ...prev,
+      [uidLine]: `${item.codigo} ${item.nombre}`,
+    }));
+  }
+
+  async function crearItemRapido(tipo: "MATERIAL" | "INSUMO") {
+    const form = tipo === "MATERIAL" ? formMaterial : formInsumo;
+    const endpoint = tipo === "MATERIAL" ? "materiales" : "insumos";
+
+    const nombre = form.nombre.trim();
+    const descripcion = form.descripcion.trim();
+    const unidadMedida = form.unidadMedida.trim() || "UND";
+    const codigo =
+      form.codigo.trim() ||
+      generarCodigoRapido(tipo === "MATERIAL" ? "MAT" : "INS", nombre);
+    const costoReferencial = Number(form.costoReferencial || 0);
+
+    if (!nombre) {
+      alert(`Ingresa el nombre del ${tipo === "MATERIAL" ? "material" : "insumo"}`);
+      return;
+    }
+
+    if (isNaN(costoReferencial) || costoReferencial < 0) {
+      alert("El costo referencial debe ser válido");
+      return;
+    }
+
+    try {
+      setGuardandoItemRapido(true);
+
+      const res = await fetch(`${apiUrl}/${endpoint}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          codigo,
+          nombre,
+          descripcion: descripcion || nombre,
+          unidadMedida,
+          costoReferencial,
+          estado: "ACTIVO",
+        }),
+      });
+
+      const data = await readJsonSafe(res);
+
+      if (!res.ok || !data.ok) {
+        alert(
+          data.error ||
+            `No se pudo registrar el ${tipo === "MATERIAL" ? "material" : "insumo"}`
+        );
+        return;
+      }
+
+      await cargarTodo();
+
+      const nuevoItem: CatalogoCompraItem | undefined = (data.data &&
+        {
+          tipoItem: tipo,
+          itemId: data.data.id,
+          codigo: data.data.codigo,
+          nombre: data.data.nombre,
+          descripcion: data.data.descripcion || data.data.nombre,
+          unidadMedida: data.data.unidadMedida || "UND",
+          costoReferencial: data.data.costoReferencial || 0,
+          estado: data.data.estado || "ACTIVO",
+        }) as CatalogoCompraItem | undefined;
+
+      if (modalNueva && nuevoItem && detalle.length > 0) {
+        const ultimaLinea = detalle[detalle.length - 1];
+        cambiarTipoLinea(ultimaLinea.uid, tipo);
+        setTimeout(() => {
+          seleccionarItem(ultimaLinea.uid, nuevoItem);
+        }, 50);
+      }
+
+      if (tipo === "MATERIAL") {
+        setModalMaterial(false);
+        setFormMaterial(createEmptyItemForm());
+      } else {
+        setModalInsumo(false);
+        setFormInsumo(createEmptyItemForm());
+      }
+
+      alert(
+        `${tipo === "MATERIAL" ? "Material" : "Insumo"} registrado correctamente`
+      );
+    } catch (error) {
+      console.error(error);
+      alert(
+        `Error registrando ${tipo === "MATERIAL" ? "material" : "insumo"}`
+      );
+    } finally {
+      setGuardandoItemRapido(false);
+    }
   }
 
   const resumenNuevaCompra = useMemo(() => {
@@ -433,12 +663,21 @@ export default function ComprasPage() {
     const lineasValidas = detalle
       .filter(
         (line) =>
-          line.productoId &&
+          line.tipoItem &&
+          line.itemId &&
+          line.codigoItem &&
+          line.descripcionItem &&
           Number(line.cantidad) > 0 &&
           Number(line.costoUnitario) >= 0
       )
       .map((line) => ({
-        productoId: line.productoId,
+        tipoItem: line.tipoItem,
+        itemId: line.itemId,
+        productoId:
+          line.tipoItem === "PRODUCTO" ? line.productoId || line.itemId : null,
+        codigoItem: line.codigoItem,
+        descripcionItem: line.descripcionItem,
+        unidadMedida: line.unidadMedida || "UND",
         cantidad: Number(line.cantidad),
         costoUnitario: Number(line.costoUnitario),
         observaciones: line.observaciones || null,
@@ -576,7 +815,7 @@ export default function ComprasPage() {
 
       await cargarTodo();
       await abrirDetalle(compraActiva.id);
-      alert("Mercadería ingresada al inventario correctamente");
+      alert("Compra procesada correctamente");
     } catch (error) {
       console.error(error);
       alert("Error ingresando inventario");
@@ -656,12 +895,11 @@ export default function ComprasPage() {
 
     autoTable(doc, {
       startY: 68,
-      head: [["Código", "Descripción", "Cant.", "Costo", "Subtotal"]],
+      head: [["Tipo", "Código", "Descripción", "Cant.", "Costo", "Subtotal"]],
       body: compra.detalles.map((d) => [
-        d.producto?.codigo || "",
-        `${d.producto?.modelo || ""} ${d.producto?.color || ""} ${
-          d.producto?.material || ""
-        } ${d.producto?.taco || ""} T${d.producto?.talla || ""}`.trim(),
+        d.tipoItem,
+        d.codigoItem || "-",
+        d.descripcionItem || "-",
         String(d.cantidad || 0),
         formatMoney(d.costoUnitario || 0),
         formatMoney(d.subtotal || 0),
@@ -670,7 +908,7 @@ export default function ComprasPage() {
         fillColor: [30, 41, 59],
       },
       styles: {
-        fontSize: 8.5,
+        fontSize: 8.2,
       },
       alternateRowStyles: {
         fillColor: [248, 250, 252],
@@ -722,12 +960,17 @@ export default function ComprasPage() {
 
     const filtradas = compras.filter((c) => {
       const nombreProveedor = getProveedorNombre(c.proveedor).toLowerCase();
+      const textoDetalle = c.detalles
+        .map((d) => `${d.codigoItem} ${d.descripcionItem} ${d.tipoItem}`)
+        .join(" ")
+        .toLowerCase();
 
       const matchQ =
         !t ||
         c.codigo.toLowerCase().includes(t) ||
         nombreProveedor.includes(t) ||
-        getProveedorDocumento(c.proveedor).toLowerCase().includes(t);
+        getProveedorDocumento(c.proveedor).toLowerCase().includes(t) ||
+        textoDetalle.includes(t);
 
       const matchProveedor = !proveedorFiltro || c.proveedorId === proveedorFiltro;
       const matchEstadoCompra =
@@ -804,6 +1047,7 @@ export default function ComprasPage() {
   ]);
 
   const totalPaginas = Math.max(1, Math.ceil(comprasFiltradas.length / filas));
+
   const comprasPagina = useMemo(() => {
     const start = (pagina - 1) * filas;
     return comprasFiltradas.slice(start, start + filas);
@@ -837,7 +1081,7 @@ export default function ComprasPage() {
 
     return (
       <span
-        className={`rounded-full px-3 py-1 text-xs font-bold ${
+        className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${
           map[estado] || "bg-slate-100 text-slate-700"
         }`}
       >
@@ -856,7 +1100,7 @@ export default function ComprasPage() {
 
     return (
       <span
-        className={`rounded-full px-3 py-1 text-xs font-bold ${
+        className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${
           map[estado] || "bg-slate-100 text-slate-700"
         }`}
       >
@@ -872,24 +1116,44 @@ export default function ComprasPage() {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-3xl bg-white p-6 shadow-sm">
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+      <section className="rounded-3xl bg-white p-4 shadow-sm sm:p-6">
+        <div className="mb-6 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h1 className="text-2xl font-black text-slate-900">Compras</h1>
             <p className="text-sm text-slate-500">
-              Registro de compras, pagos, ingreso a inventario y seguimiento
+              Registro de compras de productos, materiales e insumos
             </p>
           </div>
 
-          <button
-            onClick={abrirNuevaCompra}
-            className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-          >
-            + Nueva compra
-          </button>
+          <div className="grid gap-2 sm:grid-cols-3">
+            <button
+              onClick={abrirNuevaCompra}
+              className="rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700"
+            >
+              + Nueva compra
+            </button>
+
+            <button
+              onClick={abrirModalMaterial}
+              className={`rounded-xl border px-4 py-3 text-sm font-semibold ${classBotonSecundario(
+                "amber"
+              )}`}
+            >
+              + Material
+            </button>
+
+            <button
+              onClick={abrirModalInsumo}
+              className={`rounded-xl border px-4 py-3 text-sm font-semibold ${classBotonSecundario(
+                "violet"
+              )}`}
+            >
+              + Insumo
+            </button>
+          </div>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
             <div className="text-sm font-semibold text-slate-500">Total</div>
             <div className="mt-2 text-3xl font-black text-slate-900">
@@ -931,19 +1195,19 @@ export default function ComprasPage() {
         </div>
       </section>
 
-      <section className="rounded-3xl bg-white p-6 shadow-sm">
+      <section className="rounded-3xl bg-white p-4 shadow-sm sm:p-6">
         <div className="mb-4">
           <h2 className="text-xl font-black text-slate-900">Lista de compras</h2>
           <p className="text-sm text-slate-500">
-            Filtros, tabla ordenable, pagos y recepción
+            Filtros, vista responsive, pagos y recepción
           </p>
         </div>
 
-        <div className="mb-4 grid gap-3 md:grid-cols-4">
+        <div className="mb-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Buscar compra, proveedor o documento"
+            placeholder="Buscar compra, proveedor, documento o ítem"
             className="rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-blue-500"
           />
 
@@ -989,7 +1253,7 @@ export default function ComprasPage() {
           <p className="text-sm text-slate-500">Cargando compras...</p>
         ) : (
           <>
-            <div className="overflow-x-auto rounded-2xl border border-slate-200">
+            <div className="hidden overflow-x-auto rounded-2xl border border-slate-200 lg:block">
               <table className="min-w-full text-sm">
                 <thead className="bg-slate-100 text-left text-slate-700">
                   <tr>
@@ -1108,7 +1372,74 @@ export default function ComprasPage() {
               </table>
             </div>
 
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="space-y-3 lg:hidden">
+              {comprasPagina.map((c) => (
+                <div
+                  key={c.id}
+                  className="rounded-2xl border border-slate-200 p-4 shadow-sm"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="text-base font-black text-slate-900">
+                        {c.codigo}
+                      </div>
+                      <div className="text-sm font-semibold text-slate-700">
+                        {getProveedorNombre(c.proveedor)}
+                      </div>
+                      <div className="text-xs text-slate-500">
+                        {getProveedorDocumento(c.proveedor)}
+                      </div>
+                    </div>
+                    <div className="text-right text-xs text-slate-500">
+                      {formatDate(c.fechaCompra || c.createdAt)}
+                    </div>
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
+                    <div className="rounded-xl bg-slate-50 p-3">
+                      <div className="text-xs text-slate-500">Total</div>
+                      <div className="font-bold text-slate-900">
+                        {formatMoney(c.total)}
+                      </div>
+                    </div>
+                    <div className="rounded-xl bg-slate-50 p-3">
+                      <div className="text-xs text-slate-500">Saldo</div>
+                      <div className="font-bold text-slate-900">
+                        {formatMoney(c.saldo)}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {badgeEstadoCompra(c.estadoCompra)}
+                    {badgeEstadoRecepcion(c.estadoRecepcion)}
+                  </div>
+
+                  <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                    <button
+                      onClick={() => abrirDetalle(c.id)}
+                      className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+                    >
+                      Ver detalle
+                    </button>
+                    <button
+                      onClick={() => exportarCompraPDF(c)}
+                      className="w-full rounded-xl border border-blue-300 px-4 py-2.5 text-sm font-semibold text-blue-700 hover:bg-blue-50"
+                    >
+                      PDF
+                    </button>
+                  </div>
+                </div>
+              ))}
+
+              {comprasPagina.length === 0 && (
+                <div className="rounded-2xl border border-slate-200 p-8 text-center text-sm text-slate-500">
+                  No hay compras para esos filtros.
+                </div>
+              )}
+            </div>
+
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
               <div className="flex items-center gap-2 text-sm text-slate-600">
                 <span>Mostrar</span>
                 <select
@@ -1124,7 +1455,7 @@ export default function ComprasPage() {
                 <span>filas</span>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   disabled={pagina <= 1}
                   onClick={() => setPagina((p) => Math.max(1, p - 1))}
@@ -1149,28 +1480,46 @@ export default function ComprasPage() {
       </section>
 
       {modalNueva && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 p-4">
-          <div className="max-h-[95vh] w-full max-w-7xl overflow-y-auto rounded-3xl bg-white p-6 shadow-xl">
-            <div className="mb-5 flex items-center justify-between gap-3">
+        <div className="fixed inset-0 z-50 bg-black/40 p-2 sm:p-4">
+          <div className="mx-auto max-h-[96vh] w-full max-w-7xl overflow-y-auto rounded-3xl bg-white p-4 shadow-xl sm:p-6">
+            <div className="mb-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <h2 className="text-2xl font-black text-slate-900">
                   Nueva compra
                 </h2>
                 <p className="text-sm text-slate-500">
-                  Registro de compra con detalle por producto
+                  Registro de compra con detalle por producto, material o insumo
                 </p>
               </div>
 
-              <button
-                onClick={() => setModalNueva(false)}
-                className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700"
-              >
-                Cerrar
-              </button>
+              <div className="grid gap-2 sm:grid-cols-3">
+                <button
+                  onClick={abrirModalMaterial}
+                  className={`rounded-xl border px-4 py-3 text-sm font-semibold ${classBotonSecundario(
+                    "amber"
+                  )}`}
+                >
+                  + Material
+                </button>
+                <button
+                  onClick={abrirModalInsumo}
+                  className={`rounded-xl border px-4 py-3 text-sm font-semibold ${classBotonSecundario(
+                    "violet"
+                  )}`}
+                >
+                  + Insumo
+                </button>
+                <button
+                  onClick={() => setModalNueva(false)}
+                  className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700"
+                >
+                  Cerrar
+                </button>
+              </div>
             </div>
 
-            <div className="grid gap-6 lg:grid-cols-3">
-              <div className="space-y-4 lg:col-span-2">
+            <div className="grid gap-6 xl:grid-cols-3">
+              <div className="space-y-4 xl:col-span-2">
                 <section className="rounded-2xl border border-slate-200 p-4">
                   <h3 className="mb-3 text-lg font-black text-slate-900">
                     Proveedor
@@ -1216,32 +1565,57 @@ export default function ComprasPage() {
                 </section>
 
                 <section className="rounded-2xl border border-slate-200 p-4">
-                  <div className="mb-3 flex items-center justify-between gap-3">
-                    <h3 className="text-lg font-black text-slate-900">
-                      Detalle de compra
-                    </h3>
-                    <button
-                      type="button"
-                      onClick={agregarLinea}
-                      className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-                    >
-                      + Agregar línea
-                    </button>
+                  <div className="mb-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                    <div>
+                      <h3 className="text-lg font-black text-slate-900">
+                        Detalle de compra
+                      </h3>
+                      <p className="text-xs text-slate-500">
+                        Si no existe el material o insumo, créalo desde aquí mismo
+                      </p>
+                    </div>
+
+                    <div className="grid gap-2 sm:grid-cols-3">
+                      <button
+                        type="button"
+                        onClick={agregarLinea}
+                        className="rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700"
+                      >
+                        + Agregar línea
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={abrirModalMaterial}
+                        className={`rounded-xl border px-4 py-3 text-sm font-semibold ${classBotonSecundario(
+                          "amber"
+                        )}`}
+                      >
+                        + Material
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={abrirModalInsumo}
+                        className={`rounded-xl border px-4 py-3 text-sm font-semibold ${classBotonSecundario(
+                          "violet"
+                        )}`}
+                      >
+                        + Insumo
+                      </button>
+                    </div>
                   </div>
 
                   <div className="space-y-4">
                     {detalle.map((line, index) => {
-                      const productoSeleccionado = productos.find(
-                        (p) => p.id === line.productoId
-                      );
-                      const sugerencias = productosFiltradosLinea(line.uid);
+                      const sugerencias = itemsFiltradosLinea(line.uid, line.tipoItem);
 
                       return (
                         <div
                           key={line.uid}
                           className="rounded-2xl border border-slate-200 p-4"
                         >
-                          <div className="mb-2 flex items-center justify-between gap-3">
+                          <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                             <div className="font-bold text-slate-900">
                               Línea {index + 1}
                             </div>
@@ -1250,51 +1624,105 @@ export default function ComprasPage() {
                               <button
                                 type="button"
                                 onClick={() => eliminarLinea(line.uid)}
-                                className="rounded-lg border border-red-300 px-3 py-1 text-xs font-semibold text-red-700 hover:bg-red-50"
+                                className="rounded-lg border border-red-300 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50"
                               >
                                 Eliminar
                               </button>
                             )}
                           </div>
 
-                          <div className="grid gap-3 md:grid-cols-12">
-                            <div className="md:col-span-6">
+                          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-12">
+                            <div className="xl:col-span-3">
                               <label className="mb-1 block text-sm font-semibold text-slate-700">
-                                Buscar producto
+                                Tipo de ítem
                               </label>
-                              <input
-                                value={productoSearchByLine[line.uid] || ""}
+                              <select
+                                value={line.tipoItem}
                                 onChange={(e) =>
-                                  setProductoSearchByLine((prev) => ({
+                                  cambiarTipoLinea(
+                                    line.uid,
+                                    e.target.value as TipoItemCompra
+                                  )
+                                }
+                                className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
+                              >
+                                <option value="PRODUCTO">PRODUCTO</option>
+                                <option value="MATERIAL">MATERIAL</option>
+                                <option value="INSUMO">INSUMO</option>
+                              </select>
+                            </div>
+
+                            <div className="xl:col-span-5">
+                              <div className="mb-1 flex items-center justify-between gap-2">
+                                <label className="block text-sm font-semibold text-slate-700">
+                                  Buscar {getTipoItemLabel(line.tipoItem).toLowerCase()}
+                                </label>
+
+                                {line.tipoItem !== "PRODUCTO" && (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      line.tipoItem === "MATERIAL"
+                                        ? abrirModalMaterial()
+                                        : abrirModalInsumo()
+                                    }
+                                    className="text-xs font-semibold text-blue-600 hover:underline"
+                                  >
+                                    + Crear ahora
+                                  </button>
+                                )}
+                              </div>
+
+                              <input
+                                value={itemSearchByLine[line.uid] || ""}
+                                onChange={(e) =>
+                                  setItemSearchByLine((prev) => ({
                                     ...prev,
                                     [line.uid]: e.target.value,
                                   }))
                                 }
-                                placeholder="Buscar código o producto..."
+                                placeholder={`Buscar ${getTipoItemLabel(
+                                  line.tipoItem
+                                ).toLowerCase()} por código o nombre`}
                                 className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-blue-500"
                               />
 
                               <div className="mt-2 max-h-44 overflow-y-auto rounded-xl border border-slate-200">
-                                {sugerencias.map((p) => (
+                                {sugerencias.map((item) => (
                                   <button
-                                    key={p.id}
+                                    key={`${item.tipoItem}-${item.itemId}`}
                                     type="button"
-                                    onClick={() => seleccionarProducto(line.uid, p)}
+                                    onClick={() => seleccionarItem(line.uid, item)}
                                     className="block w-full border-b border-slate-100 px-4 py-3 text-left hover:bg-slate-50"
                                   >
-                                    <div className="font-semibold text-slate-900">
-                                      {p.codigo} - {p.modelo}
+                                    <div className="mb-1 flex flex-wrap items-center gap-2">
+                                      {badgeTipoItem(item.tipoItem)}
+                                      <span className="font-semibold text-slate-900">
+                                        {item.codigo} - {item.nombre}
+                                      </span>
                                     </div>
                                     <div className="text-xs text-slate-500">
-                                      {p.color} · {p.material} · {p.taco} · T
-                                      {p.talla} · Costo {formatMoney(p.costo)}
+                                      {item.descripcion}
+                                    </div>
+                                    <div className="mt-1 text-xs text-slate-500">
+                                      Unidad: {item.unidadMedida || "UND"} · Costo{" "}
+                                      {formatMoney(item.costoReferencial)}
                                     </div>
                                   </button>
                                 ))}
+
+                                {sugerencias.length === 0 && (
+                                  <div className="px-4 py-3 text-sm text-slate-500">
+                                    No hay resultados.{" "}
+                                    {line.tipoItem !== "PRODUCTO"
+                                      ? "Usa el botón Crear ahora."
+                                      : ""}
+                                  </div>
+                                )}
                               </div>
                             </div>
 
-                            <div className="md:col-span-2">
+                            <div className="xl:col-span-2">
                               <label className="mb-1 block text-sm font-semibold text-slate-700">
                                 Cantidad
                               </label>
@@ -1309,7 +1737,7 @@ export default function ComprasPage() {
                               />
                             </div>
 
-                            <div className="md:col-span-2">
+                            <div className="xl:col-span-2">
                               <label className="mb-1 block text-sm font-semibold text-slate-700">
                                 Costo unit.
                               </label>
@@ -1328,7 +1756,38 @@ export default function ComprasPage() {
                               />
                             </div>
 
-                            <div className="md:col-span-2">
+                            <div className="xl:col-span-3">
+                              <label className="mb-1 block text-sm font-semibold text-slate-700">
+                                Código
+                              </label>
+                              <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                                {line.codigoItem || "-"}
+                              </div>
+                            </div>
+
+                            <div className="xl:col-span-5">
+                              <label className="mb-1 block text-sm font-semibold text-slate-700">
+                                Ítem seleccionado
+                              </label>
+                              <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                                {line.itemTexto || "Aún no seleccionado"}
+                              </div>
+                            </div>
+
+                            <div className="xl:col-span-2">
+                              <label className="mb-1 block text-sm font-semibold text-slate-700">
+                                Unidad
+                              </label>
+                              <input
+                                value={line.unidadMedida}
+                                onChange={(e) =>
+                                  updateLinea(line.uid, "unidadMedida", e.target.value)
+                                }
+                                className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
+                              />
+                            </div>
+
+                            <div className="xl:col-span-2">
                               <label className="mb-1 block text-sm font-semibold text-slate-700">
                                 Subtotal
                               </label>
@@ -1340,22 +1799,16 @@ export default function ComprasPage() {
                               </div>
                             </div>
 
-                            <div className="md:col-span-12">
+                            <div className="xl:col-span-12">
                               <label className="mb-1 block text-sm font-semibold text-slate-700">
-                                Producto seleccionado
+                                Descripción
                               </label>
                               <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
-                                {line.productoTexto || "Aún no seleccionado"}
+                                {line.descripcionItem || "Aún no seleccionado"}
                               </div>
-                              {productoSeleccionado ? (
-                                <div className="mt-2 text-xs text-slate-500">
-                                  Precio venta actual:{" "}
-                                  {formatMoney(productoSeleccionado.precio)}
-                                </div>
-                              ) : null}
                             </div>
 
-                            <div className="md:col-span-12">
+                            <div className="xl:col-span-12">
                               <label className="mb-1 block text-sm font-semibold text-slate-700">
                                 Observación línea
                               </label>
@@ -1529,9 +1982,9 @@ export default function ComprasPage() {
       )}
 
       {detalleOpen && compraActiva && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 p-4">
-          <div className="max-h-[95vh] w-full max-w-7xl overflow-y-auto rounded-3xl bg-white p-6 shadow-xl">
-            <div className="mb-5 flex items-center justify-between gap-3">
+        <div className="fixed inset-0 z-50 bg-black/40 p-2 sm:p-4">
+          <div className="mx-auto max-h-[96vh] w-full max-w-7xl overflow-y-auto rounded-3xl bg-white p-4 shadow-xl sm:p-6">
+            <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h2 className="text-2xl font-black text-slate-900">
                   Detalle compra {compraActiva.codigo}
@@ -1542,31 +1995,31 @@ export default function ComprasPage() {
                 </p>
               </div>
 
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-col gap-2 sm:flex-row">
                 <button
                   onClick={() => exportarCompraPDF(compraActiva)}
-                  className="rounded-xl border border-blue-300 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50"
+                  className="w-full rounded-xl border border-blue-300 px-4 py-3 text-sm font-semibold text-blue-700 hover:bg-blue-50 sm:w-auto"
                 >
                   PDF
                 </button>
 
                 <button
                   onClick={() => setDetalleOpen(false)}
-                  className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+                  className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-100 sm:w-auto"
                 >
                   Cerrar
                 </button>
               </div>
             </div>
 
-            <div className="grid gap-6 lg:grid-cols-3">
-              <div className="space-y-4 lg:col-span-2">
+            <div className="grid gap-6 xl:grid-cols-3">
+              <div className="space-y-4 xl:col-span-2">
                 <section className="rounded-2xl border border-slate-200 p-4">
                   <h3 className="mb-3 text-lg font-black text-slate-900">
                     Cabecera
                   </h3>
 
-                  <div className="grid gap-3 text-sm text-slate-700 md:grid-cols-2">
+                  <div className="grid gap-3 text-sm text-slate-700 sm:grid-cols-2">
                     <div>
                       <b>Código:</b> {compraActiva.codigo}
                     </div>
@@ -1593,7 +2046,7 @@ export default function ComprasPage() {
                     <div>
                       <b>Registrado:</b> {formatDateTime(compraActiva.createdAt)}
                     </div>
-                    <div className="md:col-span-2">
+                    <div className="sm:col-span-2">
                       <b>Observaciones:</b> {compraActiva.observaciones || "-"}
                     </div>
                   </div>
@@ -1604,12 +2057,14 @@ export default function ComprasPage() {
                     Detalle
                   </h3>
 
-                  <div className="overflow-x-auto rounded-xl border border-slate-200">
+                  <div className="hidden overflow-x-auto rounded-xl border border-slate-200 md:block">
                     <table className="min-w-full text-sm">
                       <thead className="bg-slate-100 text-left text-slate-700">
                         <tr>
+                          <th className="px-4 py-3 font-bold">Tipo</th>
                           <th className="px-4 py-3 font-bold">Código</th>
-                          <th className="px-4 py-3 font-bold">Producto</th>
+                          <th className="px-4 py-3 font-bold">Descripción</th>
+                          <th className="px-4 py-3 font-bold">Unidad</th>
                           <th className="px-4 py-3 font-bold">Cantidad</th>
                           <th className="px-4 py-3 font-bold">Costo</th>
                           <th className="px-4 py-3 font-bold">Subtotal</th>
@@ -1621,12 +2076,10 @@ export default function ComprasPage() {
                             key={d.id || idx}
                             className="border-t border-slate-200 bg-white"
                           >
-                            <td className="px-4 py-3">{d.producto?.codigo || "-"}</td>
-                            <td className="px-4 py-3">
-                              {d.producto?.modelo} {d.producto?.color}{" "}
-                              {d.producto?.material} {d.producto?.taco} T
-                              {d.producto?.talla}
-                            </td>
+                            <td className="px-4 py-3">{badgeTipoItem(d.tipoItem)}</td>
+                            <td className="px-4 py-3">{d.codigoItem || "-"}</td>
+                            <td className="px-4 py-3">{d.descripcionItem || "-"}</td>
+                            <td className="px-4 py-3">{d.unidadMedida || "UND"}</td>
                             <td className="px-4 py-3">{d.cantidad}</td>
                             <td className="px-4 py-3">
                               {formatMoney(d.costoUnitario)}
@@ -1638,6 +2091,51 @@ export default function ComprasPage() {
                         ))}
                       </tbody>
                     </table>
+                  </div>
+
+                  <div className="space-y-3 md:hidden">
+                    {compraActiva.detalles.map((d, idx) => (
+                      <div
+                        key={d.id || idx}
+                        className="rounded-2xl border border-slate-200 p-4"
+                      >
+                        <div className="mb-2 flex items-center justify-between gap-2">
+                          {badgeTipoItem(d.tipoItem)}
+                          <div className="text-xs text-slate-500">
+                            {d.codigoItem || "-"}
+                          </div>
+                        </div>
+                        <div className="text-sm font-semibold text-slate-900">
+                          {d.descripcionItem || "-"}
+                        </div>
+                        <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
+                          <div className="rounded-xl bg-slate-50 p-3">
+                            <div className="text-xs text-slate-500">Unidad</div>
+                            <div className="font-bold text-slate-900">
+                              {d.unidadMedida || "UND"}
+                            </div>
+                          </div>
+                          <div className="rounded-xl bg-slate-50 p-3">
+                            <div className="text-xs text-slate-500">Cantidad</div>
+                            <div className="font-bold text-slate-900">
+                              {d.cantidad}
+                            </div>
+                          </div>
+                          <div className="rounded-xl bg-slate-50 p-3">
+                            <div className="text-xs text-slate-500">Costo</div>
+                            <div className="font-bold text-slate-900">
+                              {formatMoney(d.costoUnitario)}
+                            </div>
+                          </div>
+                          <div className="rounded-xl bg-slate-50 p-3">
+                            <div className="text-xs text-slate-500">Subtotal</div>
+                            <div className="font-bold text-slate-900">
+                              {formatMoney(d.subtotal)}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </section>
 
@@ -1758,7 +2256,7 @@ export default function ComprasPage() {
                       disabled={procesando || !puedeIngresarInventario}
                       className="w-full rounded-xl border border-blue-300 px-4 py-3 text-sm font-semibold text-blue-700 hover:bg-blue-50 disabled:opacity-50"
                     >
-                      Ingresar a inventario
+                      Ingresar a inventario / recepción
                     </button>
 
                     <button
@@ -1782,6 +2280,268 @@ export default function ComprasPage() {
                   </div>
                 </section>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {modalMaterial && (
+        <div className="fixed inset-0 z-[60] bg-black/50 p-2 sm:p-4">
+          <div className="mx-auto w-full max-w-xl rounded-3xl bg-white p-4 shadow-xl sm:p-6">
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-xl font-black text-slate-900">
+                  Nuevo material
+                </h3>
+                <p className="text-sm text-slate-500">
+                  Créalo aquí y luego aparecerá en la búsqueda de compras
+                </p>
+              </div>
+
+              <button
+                onClick={cerrarModalMaterial}
+                className="rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700"
+              >
+                Cerrar
+              </button>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="mb-1 block text-sm font-semibold text-slate-700">
+                  Código
+                </label>
+                <input
+                  value={formMaterial.codigo}
+                  onChange={(e) =>
+                    setFormMaterial((prev) => ({
+                      ...prev,
+                      codigo: e.target.value,
+                    }))
+                  }
+                  placeholder="MAT-CUERO-00001"
+                  className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-semibold text-slate-700">
+                  Unidad
+                </label>
+                <input
+                  value={formMaterial.unidadMedida}
+                  onChange={(e) =>
+                    setFormMaterial((prev) => ({
+                      ...prev,
+                      unidadMedida: e.target.value,
+                    }))
+                  }
+                  placeholder="UND, MTS, KG..."
+                  className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="mb-1 block text-sm font-semibold text-slate-700">
+                  Nombre
+                </label>
+                <input
+                  value={formMaterial.nombre}
+                  onChange={(e) =>
+                    setFormMaterial((prev) => ({
+                      ...prev,
+                      nombre: e.target.value,
+                      codigo:
+                        prev.codigo.trim() ||
+                        generarCodigoRapido("MAT", e.target.value),
+                    }))
+                  }
+                  placeholder="Ej. Cuero negro premium"
+                  className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="mb-1 block text-sm font-semibold text-slate-700">
+                  Descripción
+                </label>
+                <textarea
+                  value={formMaterial.descripcion}
+                  onChange={(e) =>
+                    setFormMaterial((prev) => ({
+                      ...prev,
+                      descripcion: e.target.value,
+                    }))
+                  }
+                  className="min-h-[100px] w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
+                  placeholder="Detalle del material"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="mb-1 block text-sm font-semibold text-slate-700">
+                  Costo referencial
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={formMaterial.costoReferencial}
+                  onChange={(e) =>
+                    setFormMaterial((prev) => ({
+                      ...prev,
+                      costoReferencial: e.target.value,
+                    }))
+                  }
+                  className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
+                />
+              </div>
+            </div>
+
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
+              <button
+                onClick={cerrarModalMaterial}
+                className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => crearItemRapido("MATERIAL")}
+                disabled={guardandoItemRapido}
+                className="rounded-xl bg-amber-500 px-4 py-3 text-sm font-semibold text-white hover:bg-amber-600 disabled:opacity-60"
+              >
+                Guardar material
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {modalInsumo && (
+        <div className="fixed inset-0 z-[60] bg-black/50 p-2 sm:p-4">
+          <div className="mx-auto w-full max-w-xl rounded-3xl bg-white p-4 shadow-xl sm:p-6">
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-xl font-black text-slate-900">
+                  Nuevo insumo
+                </h3>
+                <p className="text-sm text-slate-500">
+                  Créalo aquí y luego aparecerá en la búsqueda de compras
+                </p>
+              </div>
+
+              <button
+                onClick={cerrarModalInsumo}
+                className="rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700"
+              >
+                Cerrar
+              </button>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="mb-1 block text-sm font-semibold text-slate-700">
+                  Código
+                </label>
+                <input
+                  value={formInsumo.codigo}
+                  onChange={(e) =>
+                    setFormInsumo((prev) => ({
+                      ...prev,
+                      codigo: e.target.value,
+                    }))
+                  }
+                  placeholder="INS-PEGAMENTO-00001"
+                  className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-semibold text-slate-700">
+                  Unidad
+                </label>
+                <input
+                  value={formInsumo.unidadMedida}
+                  onChange={(e) =>
+                    setFormInsumo((prev) => ({
+                      ...prev,
+                      unidadMedida: e.target.value,
+                    }))
+                  }
+                  placeholder="UND, LT, KG..."
+                  className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="mb-1 block text-sm font-semibold text-slate-700">
+                  Nombre
+                </label>
+                <input
+                  value={formInsumo.nombre}
+                  onChange={(e) =>
+                    setFormInsumo((prev) => ({
+                      ...prev,
+                      nombre: e.target.value,
+                      codigo:
+                        prev.codigo.trim() ||
+                        generarCodigoRapido("INS", e.target.value),
+                    }))
+                  }
+                  placeholder="Ej. Pegamento industrial"
+                  className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="mb-1 block text-sm font-semibold text-slate-700">
+                  Descripción
+                </label>
+                <textarea
+                  value={formInsumo.descripcion}
+                  onChange={(e) =>
+                    setFormInsumo((prev) => ({
+                      ...prev,
+                      descripcion: e.target.value,
+                    }))
+                  }
+                  className="min-h-[100px] w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
+                  placeholder="Detalle del insumo"
+                />
+              </div>
+
+              <div className="sm:col-span-2">
+                <label className="mb-1 block text-sm font-semibold text-slate-700">
+                  Costo referencial
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={formInsumo.costoReferencial}
+                  onChange={(e) =>
+                    setFormInsumo((prev) => ({
+                      ...prev,
+                      costoReferencial: e.target.value,
+                    }))
+                  }
+                  className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
+                />
+              </div>
+            </div>
+
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
+              <button
+                onClick={cerrarModalInsumo}
+                className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => crearItemRapido("INSUMO")}
+                disabled={guardandoItemRapido}
+                className="rounded-xl bg-violet-600 px-4 py-3 text-sm font-semibold text-white hover:bg-violet-700 disabled:opacity-60"
+              >
+                Guardar insumo
+              </button>
             </div>
           </div>
         </div>
