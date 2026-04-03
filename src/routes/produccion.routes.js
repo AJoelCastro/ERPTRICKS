@@ -2,6 +2,72 @@ const express = require("express");
 
 const router = express.Router();
 
+async function enriquecerOrdenConInventario(prisma, orden) {
+  if (!orden) return null;
+
+  const tallas = Object.keys(orden.corridaJson || {}).map((t) => String(t));
+
+  const inventarios = await prisma.inventario.findMany({
+    where: {
+      almacenId: orden.almacenDestinoId,
+      producto: {
+        modelo: orden.modelo,
+        color: orden.color,
+        material: orden.material || null,
+        taco: orden.taco || null,
+        talla: {
+          in: tallas.map((t) => Number(t)).filter((n) => !Number.isNaN(n)),
+        },
+      },
+    },
+    include: {
+      producto: true,
+      almacen: true,
+    },
+  });
+
+  const codigoBarrasPorTalla = {};
+  const skuPorTalla = {};
+
+  for (const inv of inventarios) {
+    const tallaKey = String(inv.producto?.talla ?? "");
+    if (!tallaKey) continue;
+
+    codigoBarrasPorTalla[tallaKey] = inv.codigoBarras || null;
+    skuPorTalla[tallaKey] = inv.sku || null;
+  }
+
+  const tallaBaseKey = String(orden.productoBase?.talla ?? "");
+  const codigoBarrasBase =
+    (tallaBaseKey && codigoBarrasPorTalla[tallaBaseKey]) || null;
+  const skuBase = (tallaBaseKey && skuPorTalla[tallaBaseKey]) || null;
+
+  return {
+    ...orden,
+    productoBase: orden.productoBase
+      ? {
+          ...orden.productoBase,
+          codigoBarras: codigoBarrasBase,
+          sku: skuBase,
+        }
+      : orden.productoBase,
+    codigoBarrasPorTalla,
+    skuPorTalla,
+  };
+}
+
+async function enriquecerOrdenesConInventario(prisma, ordenes) {
+  if (!Array.isArray(ordenes) || !ordenes.length) return [];
+
+  const resultado = [];
+  for (const orden of ordenes) {
+    const enriquecida = await enriquecerOrdenConInventario(prisma, orden);
+    resultado.push(enriquecida);
+  }
+
+  return resultado;
+}
+
 /**
  * GET /produccion
  * Lista órdenes de producción
@@ -22,9 +88,11 @@ router.get("/", async (req, res) => {
       },
     });
 
+    const ordenesEnriquecidas = await enriquecerOrdenesConInventario(prisma, ordenes);
+
     res.json({
       ok: true,
-      data: ordenes,
+      data: ordenesEnriquecidas,
     });
   } catch (error) {
     res.status(500).json({
@@ -68,9 +136,11 @@ router.get("/:id", async (req, res) => {
       });
     }
 
+    const ordenEnriquecida = await enriquecerOrdenConInventario(prisma, orden);
+
     res.json({
       ok: true,
-      data: orden,
+      data: ordenEnriquecida,
     });
   } catch (error) {
     res.status(500).json({
@@ -211,9 +281,11 @@ router.post("/", async (req, res) => {
       },
     });
 
+    const ordenEnriquecida = await enriquecerOrdenConInventario(prisma, ordenCompleta);
+
     res.status(201).json({
       ok: true,
-      data: ordenCompleta,
+      data: ordenEnriquecida,
     });
   } catch (error) {
     res.status(500).json({
@@ -359,9 +431,11 @@ router.post("/desde-pedido/:pedidoId", async (req, res) => {
       },
     });
 
+    const ordenEnriquecida = await enriquecerOrdenConInventario(prisma, ordenCompleta);
+
     res.status(201).json({
       ok: true,
-      data: ordenCompleta,
+      data: ordenEnriquecida,
     });
   } catch (error) {
     res.status(500).json({
@@ -545,7 +619,6 @@ router.post("/:id/etapas/:etapa/finalizar", async (req, res) => {
       let movimientoInventario = null;
 
       if (esIngresoAlmacen) {
-        // Buscar inventario existente
         const inventarioExistente = await tx.inventario.findFirst({
           where: {
             productoId: orden.productoBaseId,

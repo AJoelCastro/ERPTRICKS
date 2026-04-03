@@ -87,10 +87,15 @@ type OrdenProduccion = {
   usuarioEmail?: string | null;
   createdAt: string;
   updatedAt: string;
-  productoBase: Producto;
+  productoBase: Producto & {
+    codigoBarras?: string | null;
+    sku?: string | null;
+  };
   almacenDestino: Almacen;
   etapas: EtapaProduccion[];
   movimientos: MovimientoProduccion[];
+  codigoBarrasPorTalla?: Record<string, string | null>;
+  skuPorTalla?: Record<string, string | null>;
 };
 
 type SortKeyProduccion =
@@ -831,7 +836,9 @@ export default function ProduccionPage() {
           width: 320,
         });
 
-        const barcodeValue = String(orden.productoBase?.codigoBarras || "").trim();
+        const barcodeValue = String(
+          orden.codigoBarrasPorTalla?.[String(item.talla)] || ""
+        ).trim();
         const barcodeUrl = barcodeValue ? await generateBarcodeDataUrl(barcodeValue) : null;
 
         drawPremiumFrame(doc, frameX, frameY, frameW, frameH);
