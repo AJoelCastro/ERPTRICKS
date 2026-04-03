@@ -324,8 +324,8 @@ export default function AlmacenesPage() {
 
   if (!can("almacenes.ver")) {
     return (
-      <div className="rounded-3xl bg-white p-6 shadow-sm">
-        <h1 className="text-2xl font-black text-slate-900">Almacenes</h1>
+      <div className="rounded-2xl bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
+        <h1 className="text-xl font-black text-slate-900 sm:text-2xl">Almacenes</h1>
         <p className="mt-2 text-sm text-slate-500">
           No tienes permiso para ver esta sección.
         </p>
@@ -334,11 +334,11 @@ export default function AlmacenesPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-3xl bg-white p-6 shadow-sm">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+    <div className="space-y-4 sm:space-y-6">
+      <section className="rounded-2xl bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-black text-slate-900">Almacenes</h1>
+            <h1 className="text-xl font-black text-slate-900 sm:text-2xl">Almacenes</h1>
             <p className="text-sm text-slate-500">
               Gestión de almacenes del sistema
             </p>
@@ -347,14 +347,14 @@ export default function AlmacenesPage() {
           {can("almacenes.crear") && (
             <button
               onClick={abrirModalCrear}
-              className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+              className="w-full rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700 sm:w-auto sm:py-2"
             >
               + Nuevo almacén
             </button>
           )}
         </div>
 
-        <div className="mb-4 grid gap-3 md:grid-cols-3">
+        <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-3">
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
@@ -384,7 +384,7 @@ export default function AlmacenesPage() {
           <p className="text-sm text-slate-500">No hay almacenes registrados.</p>
         ) : (
           <>
-            <div className="overflow-x-auto rounded-2xl border border-slate-200">
+            <div className="hidden lg:block overflow-x-auto rounded-2xl border border-slate-200">
               <table className="min-w-full text-sm">
                 <thead className="bg-slate-100 text-left text-slate-700">
                   <tr>
@@ -445,7 +445,64 @@ export default function AlmacenesPage() {
               </table>
             </div>
 
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="grid gap-3 lg:hidden">
+              {almacenesPagina.map((almacen) => (
+                <div
+                  key={almacen.id}
+                  className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="font-black text-slate-900">{almacen.codigo}</div>
+                      <div className="text-sm text-slate-600">{almacen.nombre}</div>
+                    </div>
+                    {badgeEstado(almacen.activo)}
+                  </div>
+
+                  <div className="mt-3 space-y-2 text-sm text-slate-700">
+                    <div>
+                      <span className="font-semibold">Creado:</span>{" "}
+                      {formatFecha(almacen.createdAt)}
+                    </div>
+                    <div>
+                      <span className="font-semibold">Actualizado:</span>{" "}
+                      {formatFecha(almacen.updatedAt)}
+                    </div>
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    {can("almacenes.editar") && (
+                      <button
+                        onClick={() => abrirModalEditar(almacen)}
+                        className="rounded-xl border border-blue-300 px-4 py-3 text-sm font-semibold text-blue-700 hover:bg-blue-50"
+                      >
+                        Editar
+                      </button>
+                    )}
+
+                    {can("almacenes.estado") && (
+                      <button
+                        onClick={() => toggleActivo(almacen)}
+                        disabled={cambiandoEstadoId === almacen.id}
+                        className={`rounded-xl px-4 py-3 text-sm font-semibold ${
+                          almacen.activo
+                            ? "border border-red-300 text-red-700 hover:bg-red-50"
+                            : "border border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                        } disabled:opacity-60`}
+                      >
+                        {cambiandoEstadoId === almacen.id
+                          ? "Procesando..."
+                          : almacen.activo
+                          ? "Desactivar"
+                          : "Activar"}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
               <div className="flex items-center gap-2 text-sm text-slate-600">
                 <span>Mostrar</span>
                 <select
@@ -461,17 +518,17 @@ export default function AlmacenesPage() {
                 <span>filas</span>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="grid grid-cols-3 gap-2 sm:flex sm:items-center">
                 <button
                   disabled={paginaActual <= 1}
                   onClick={() => setPaginaActual((p) => Math.max(1, p - 1))}
                   className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  ◀ Anterior
+                  ◀ Ant.
                 </button>
 
-                <div className="rounded-lg bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700">
-                  Página {paginaActual} de {totalPaginas}
+                <div className="flex items-center justify-center rounded-lg bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700">
+                  {paginaActual} / {totalPaginas}
                 </div>
 
                 <button
@@ -481,7 +538,7 @@ export default function AlmacenesPage() {
                   }
                   className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  Siguiente ▶
+                  Sig. ▶
                 </button>
               </div>
             </div>
@@ -490,141 +547,149 @@ export default function AlmacenesPage() {
       </section>
 
       {modalCrearOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-xl">
-            <div className="mb-4 flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-black text-slate-900">
-                  Crear almacén
-                </h2>
-                <p className="text-sm text-slate-500">
-                  Registra un nuevo almacén
-                </p>
-              </div>
+        <div className="fixed inset-0 z-50 bg-black/40 p-0 sm:flex sm:items-center sm:justify-center sm:p-4">
+          <div className="flex h-dvh w-full flex-col bg-white shadow-xl sm:h-auto sm:max-w-lg sm:rounded-3xl">
+            <div className="sticky top-0 z-10 border-b border-slate-200 bg-white p-4 sm:rounded-t-3xl sm:p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-black text-slate-900 sm:text-2xl">
+                    Crear almacén
+                  </h2>
+                  <p className="text-sm text-slate-500">
+                    Registra un nuevo almacén
+                  </p>
+                </div>
 
-              <button
-                onClick={cerrarModalCrear}
-                className="rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
-              >
-                Cerrar
-              </button>
+                <button
+                  onClick={cerrarModalCrear}
+                  className="rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+                >
+                  Cerrar
+                </button>
+              </div>
             </div>
 
-            <form onSubmit={guardarCrear} className="space-y-4">
-              <div>
-                <label className="mb-1 block text-sm font-semibold text-slate-700">
-                  Código
-                </label>
-                <input
-                  value={formCrear.codigo}
-                  onChange={(e) => updateFormCrear("codigo", e.target.value)}
-                  className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm uppercase outline-none focus:border-blue-500"
-                  placeholder="Ejemplo: ALM-01"
-                  required
-                />
-              </div>
+            <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
+              <form onSubmit={guardarCrear} className="space-y-4">
+                <div>
+                  <label className="mb-1 block text-sm font-semibold text-slate-700">
+                    Código
+                  </label>
+                  <input
+                    value={formCrear.codigo}
+                    onChange={(e) => updateFormCrear("codigo", e.target.value)}
+                    className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm uppercase outline-none focus:border-blue-500"
+                    placeholder="Ejemplo: ALM-01"
+                    required
+                  />
+                </div>
 
-              <div>
-                <label className="mb-1 block text-sm font-semibold text-slate-700">
-                  Nombre
-                </label>
-                <input
-                  value={formCrear.nombre}
-                  onChange={(e) => updateFormCrear("nombre", e.target.value)}
-                  className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-blue-500"
-                  placeholder="Ejemplo: Almacén Principal"
-                  required
-                />
-              </div>
+                <div>
+                  <label className="mb-1 block text-sm font-semibold text-slate-700">
+                    Nombre
+                  </label>
+                  <input
+                    value={formCrear.nombre}
+                    onChange={(e) => updateFormCrear("nombre", e.target.value)}
+                    className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-blue-500"
+                    placeholder="Ejemplo: Almacén Principal"
+                    required
+                  />
+                </div>
 
-              <div className="flex justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={cerrarModalCrear}
-                  className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
-                >
-                  Cancelar
-                </button>
+                <div className="grid grid-cols-2 gap-3 pt-2 sm:flex sm:justify-end">
+                  <button
+                    type="button"
+                    onClick={cerrarModalCrear}
+                    className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-100 sm:py-2"
+                  >
+                    Cancelar
+                  </button>
 
-                <button
-                  type="submit"
-                  disabled={guardando}
-                  className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
-                >
-                  {guardando ? "Guardando..." : "Crear almacén"}
-                </button>
-              </div>
-            </form>
+                  <button
+                    type="submit"
+                    disabled={guardando}
+                    className="rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60 sm:py-2"
+                  >
+                    {guardando ? "Guardando..." : "Crear almacén"}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}
 
       {modalEditarOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-xl">
-            <div className="mb-4 flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-black text-slate-900">
-                  Editar almacén
-                </h2>
-                <p className="text-sm text-slate-500">
-                  Actualiza los datos del almacén
-                </p>
-              </div>
+        <div className="fixed inset-0 z-50 bg-black/40 p-0 sm:flex sm:items-center sm:justify-center sm:p-4">
+          <div className="flex h-dvh w-full flex-col bg-white shadow-xl sm:h-auto sm:max-w-lg sm:rounded-3xl">
+            <div className="sticky top-0 z-10 border-b border-slate-200 bg-white p-4 sm:rounded-t-3xl sm:p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-black text-slate-900 sm:text-2xl">
+                    Editar almacén
+                  </h2>
+                  <p className="text-sm text-slate-500">
+                    Actualiza los datos del almacén
+                  </p>
+                </div>
 
-              <button
-                onClick={cerrarModalEditar}
-                className="rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
-              >
-                Cerrar
-              </button>
+                <button
+                  onClick={cerrarModalEditar}
+                  className="rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+                >
+                  Cerrar
+                </button>
+              </div>
             </div>
 
-            <form onSubmit={guardarEditar} className="space-y-4">
-              <div>
-                <label className="mb-1 block text-sm font-semibold text-slate-700">
-                  Código
-                </label>
-                <input
-                  value={formEditar.codigo}
-                  onChange={(e) => updateFormEditar("codigo", e.target.value)}
-                  className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm uppercase outline-none focus:border-blue-500"
-                  placeholder="Ejemplo: ALM-01"
-                  required
-                />
-              </div>
+            <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
+              <form onSubmit={guardarEditar} className="space-y-4">
+                <div>
+                  <label className="mb-1 block text-sm font-semibold text-slate-700">
+                    Código
+                  </label>
+                  <input
+                    value={formEditar.codigo}
+                    onChange={(e) => updateFormEditar("codigo", e.target.value)}
+                    className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm uppercase outline-none focus:border-blue-500"
+                    placeholder="Ejemplo: ALM-01"
+                    required
+                  />
+                </div>
 
-              <div>
-                <label className="mb-1 block text-sm font-semibold text-slate-700">
-                  Nombre
-                </label>
-                <input
-                  value={formEditar.nombre}
-                  onChange={(e) => updateFormEditar("nombre", e.target.value)}
-                  className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-blue-500"
-                  placeholder="Ejemplo: Almacén Principal"
-                  required
-                />
-              </div>
+                <div>
+                  <label className="mb-1 block text-sm font-semibold text-slate-700">
+                    Nombre
+                  </label>
+                  <input
+                    value={formEditar.nombre}
+                    onChange={(e) => updateFormEditar("nombre", e.target.value)}
+                    className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-blue-500"
+                    placeholder="Ejemplo: Almacén Principal"
+                    required
+                  />
+                </div>
 
-              <div className="flex justify-end gap-3 pt-2">
-                <button
-                  type="button"
-                  onClick={cerrarModalEditar}
-                  className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
-                >
-                  Cancelar
-                </button>
+                <div className="grid grid-cols-2 gap-3 pt-2 sm:flex sm:justify-end">
+                  <button
+                    type="button"
+                    onClick={cerrarModalEditar}
+                    className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-100 sm:py-2"
+                  >
+                    Cancelar
+                  </button>
 
-                <button
-                  type="submit"
-                  disabled={guardando}
-                  className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
-                >
-                  {guardando ? "Guardando..." : "Guardar cambios"}
-                </button>
-              </div>
-            </form>
+                  <button
+                    type="submit"
+                    disabled={guardando}
+                    className="rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60 sm:py-2"
+                  >
+                    {guardando ? "Guardando..." : "Guardar cambios"}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}
