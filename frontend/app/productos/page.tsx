@@ -345,11 +345,11 @@ export default function ProductosPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-3xl bg-white p-6 shadow-sm">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+    <div className="space-y-4 sm:space-y-6">
+      <section className="rounded-2xl bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
+        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-black text-slate-900">Productos</h1>
+            <h1 className="text-xl font-black text-slate-900 sm:text-2xl">Productos</h1>
             <p className="text-sm text-slate-500">
               Catálogo completo de productos del sistema
             </p>
@@ -357,13 +357,13 @@ export default function ProductosPage() {
 
           <button
             onClick={abrirModalNuevo}
-            className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+            className="w-full rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700 sm:w-auto sm:py-2"
           >
             + Nuevo producto
           </button>
         </div>
 
-        <div className="mb-4 grid gap-3 md:grid-cols-3">
+        <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-3">
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
@@ -381,7 +381,7 @@ export default function ProductosPage() {
             <option value="INACTIVO">INACTIVO</option>
           </select>
 
-          <div className="flex items-center justify-start gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+          <div className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600 md:justify-start">
             <span className="font-semibold">Total filtrado:</span>
             <span>{productosFiltrados.length}</span>
           </div>
@@ -393,7 +393,7 @@ export default function ProductosPage() {
           <p className="text-sm text-slate-500">No hay productos registrados.</p>
         ) : (
           <>
-            <div className="overflow-x-auto rounded-2xl border border-slate-200">
+            <div className="hidden xl:block overflow-x-auto rounded-2xl border border-slate-200">
               <table className="min-w-full text-sm">
                 <thead className="bg-slate-100 text-left text-slate-700">
                   <tr>
@@ -510,7 +510,69 @@ export default function ProductosPage() {
               </table>
             </div>
 
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="grid gap-3 xl:hidden">
+              {productosPagina.map((producto) => (
+                <div
+                  key={producto.id}
+                  className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="font-black text-slate-900">{producto.codigo}</div>
+                      <div className="text-sm font-semibold text-slate-800">
+                        {producto.modelo}
+                      </div>
+                      <div className="text-xs text-slate-500">
+                        {producto.color} · {producto.material} · {producto.taco}
+                      </div>
+                    </div>
+                    {badgeEstado(producto.estado)}
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-600">
+                    <div>
+                      <span className="font-semibold">Colección:</span> {producto.coleccion || "-"}
+                    </div>
+                    <div>
+                      <span className="font-semibold">Talla:</span> {producto.talla}
+                    </div>
+                    <div>
+                      <span className="font-semibold">Costo:</span> S/ {producto.costo}
+                    </div>
+                    <div>
+                      <span className="font-semibold">Precio:</span> S/ {producto.precio}
+                    </div>
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => abrirModalEditar(producto)}
+                      className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+                    >
+                      Editar
+                    </button>
+
+                    {producto.estado === "ACTIVO" ? (
+                      <button
+                        onClick={() => cambiarEstado(producto, "INACTIVO")}
+                        className="rounded-xl border border-red-300 px-4 py-3 text-sm font-semibold text-red-700 hover:bg-red-50"
+                      >
+                        Inactivar
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => cambiarEstado(producto, "ACTIVO")}
+                        className="rounded-xl border border-emerald-300 px-4 py-3 text-sm font-semibold text-emerald-700 hover:bg-emerald-50"
+                      >
+                        Activar
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
               <div className="flex items-center gap-2 text-sm text-slate-600">
                 <span>Mostrar</span>
                 <select
@@ -526,17 +588,17 @@ export default function ProductosPage() {
                 <span>filas</span>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="grid grid-cols-3 gap-2 sm:flex sm:items-center">
                 <button
                   disabled={paginaActual <= 1}
                   onClick={() => setPaginaActual((p) => Math.max(1, p - 1))}
                   className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  ◀ Anterior
+                  ◀ Ant.
                 </button>
 
-                <div className="rounded-lg bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700">
-                  Página {paginaActual} de {totalPaginas}
+                <div className="flex items-center justify-center rounded-lg bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700">
+                  {paginaActual} / {totalPaginas}
                 </div>
 
                 <button
@@ -546,7 +608,7 @@ export default function ProductosPage() {
                   }
                   className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  Siguiente ▶
+                  Sig. ▶
                 </button>
               </div>
             </div>
@@ -555,176 +617,183 @@ export default function ProductosPage() {
       </section>
 
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-4xl rounded-3xl bg-white p-6 shadow-xl">
-            <div className="mb-4 flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-black text-slate-900">
-                  {modoEdicion ? "Editar producto" : "Nuevo producto"}
-                </h2>
-                <p className="text-sm text-slate-500">
-                  {modoEdicion
-                    ? "Editar una talla específica"
-                    : "Crear un producto individual o varias tallas en masivo"}
-                </p>
-              </div>
+        <div className="fixed inset-0 z-50 bg-black/40 p-0 sm:flex sm:items-center sm:justify-center sm:p-4">
+          <div className="flex h-dvh w-full flex-col bg-white shadow-xl sm:h-auto sm:max-h-[95vh] sm:max-w-4xl sm:rounded-3xl sm:p-6">
+            <div className="sticky top-0 z-10 border-b border-slate-200 bg-white p-4 sm:static sm:border-0 sm:bg-transparent sm:p-0">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h2 className="text-xl font-black text-slate-900 sm:text-2xl">
+                    {modoEdicion ? "Editar producto" : "Nuevo producto"}
+                  </h2>
+                  <p className="text-sm text-slate-500">
+                    {modoEdicion
+                      ? "Editar una talla específica"
+                      : "Crear un producto individual o varias tallas en masivo"}
+                  </p>
+                </div>
 
-              <button
-                onClick={cerrarModal}
-                className="rounded-xl border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
-              >
-                Cerrar
-              </button>
+                <button
+                  onClick={cerrarModal}
+                  className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-100 sm:px-3 sm:py-2"
+                >
+                  Cerrar
+                </button>
+              </div>
             </div>
 
-            <form onSubmit={guardarProducto} className="space-y-4">
-              {!modoEdicion && (
-                <div className="flex flex-wrap gap-4 rounded-2xl bg-slate-50 p-4">
-                  <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-                    <input
-                      type="radio"
-                      checked={crearMasivo}
-                      onChange={() => setCrearMasivo(true)}
-                    />
-                    Crear por rango de tallas
-                  </label>
+            <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-0">
+              <form onSubmit={guardarProducto} className="space-y-4">
+                {!modoEdicion && (
+                  <div className="flex flex-col gap-3 rounded-2xl bg-slate-50 p-4 sm:flex-row sm:flex-wrap">
+                    <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                      <input
+                        type="radio"
+                        checked={crearMasivo}
+                        onChange={() => setCrearMasivo(true)}
+                      />
+                      Crear por rango de tallas
+                    </label>
 
-                  <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-                    <input
-                      type="radio"
-                      checked={!crearMasivo}
-                      onChange={() => setCrearMasivo(false)}
-                    />
-                    Crear una sola talla
-                  </label>
-                </div>
-              )}
-
-              <div className="grid gap-4 md:grid-cols-3">
-                <input
-                  value={form.modelo}
-                  onChange={(e) => updateForm("modelo", e.target.value)}
-                  placeholder="Modelo"
-                  className="rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-blue-500"
-                  required
-                />
-                <input
-                  value={form.color}
-                  onChange={(e) => updateForm("color", e.target.value)}
-                  placeholder="Color"
-                  className="rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-blue-500"
-                  required
-                />
-                <input
-                  value={form.material}
-                  onChange={(e) => updateForm("material", e.target.value)}
-                  placeholder="Material"
-                  className="rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-blue-500"
-                  required
-                />
-
-                <input
-                  value={form.taco}
-                  onChange={(e) => updateForm("taco", e.target.value)}
-                  placeholder="Taco"
-                  className="rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-blue-500"
-                  required
-                />
-                <input
-                  value={form.coleccion}
-                  onChange={(e) => updateForm("coleccion", e.target.value)}
-                  placeholder="Colección"
-                  className="rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-blue-500"
-                />
-                <input
-                  type="number"
-                  step="0.01"
-                  value={form.costo}
-                  onChange={(e) => updateForm("costo", e.target.value)}
-                  placeholder="Costo"
-                  className="rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-blue-500"
-                  required
-                />
-
-                <input
-                  type="number"
-                  step="0.01"
-                  value={form.precio}
-                  onChange={(e) => updateForm("precio", e.target.value)}
-                  placeholder="Precio"
-                  className="rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-blue-500"
-                  required
-                />
-
-                {modoEdicion ? (
-                  <input
-                    type="number"
-                    value={form.talla}
-                    onChange={(e) => updateForm("talla", e.target.value)}
-                    placeholder="Talla"
-                    className="rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-blue-500"
-                    required
-                  />
-                ) : crearMasivo ? (
-                  <>
-                    <input
-                      type="number"
-                      value={form.tallaDesde}
-                      onChange={(e) => updateForm("tallaDesde", e.target.value)}
-                      placeholder="Talla desde"
-                      className="rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-blue-500"
-                      required
-                    />
-                    <input
-                      type="number"
-                      value={form.tallaHasta}
-                      onChange={(e) => updateForm("tallaHasta", e.target.value)}
-                      placeholder="Talla hasta"
-                      className="rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-blue-500"
-                      required
-                    />
-                  </>
-                ) : (
-                  <input
-                    type="number"
-                    value={form.talla}
-                    onChange={(e) => updateForm("talla", e.target.value)}
-                    placeholder="Talla"
-                    className="rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-blue-500"
-                    required
-                  />
+                    <label className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                      <input
+                        type="radio"
+                        checked={!crearMasivo}
+                        onChange={() => setCrearMasivo(false)}
+                      />
+                      Crear una sola talla
+                    </label>
+                  </div>
                 )}
-              </div>
 
-              {!modoEdicion && (
-                <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
-                  El código del producto se genera automáticamente. Si eliges rango,
-                  se crearán varias tallas del mismo modelo en una sola acción.
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  <input
+                    value={form.modelo}
+                    onChange={(e) => updateForm("modelo", e.target.value)}
+                    placeholder="Modelo"
+                    className="rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-blue-500"
+                    required
+                  />
+                  <input
+                    value={form.color}
+                    onChange={(e) => updateForm("color", e.target.value)}
+                    placeholder="Color"
+                    className="rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-blue-500"
+                    required
+                  />
+                  <input
+                    value={form.material}
+                    onChange={(e) => updateForm("material", e.target.value)}
+                    placeholder="Material"
+                    className="rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-blue-500"
+                    required
+                  />
+
+                  <input
+                    value={form.taco}
+                    onChange={(e) => updateForm("taco", e.target.value)}
+                    placeholder="Taco"
+                    className="rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-blue-500"
+                    required
+                  />
+                  <input
+                    value={form.coleccion}
+                    onChange={(e) => updateForm("coleccion", e.target.value)}
+                    placeholder="Colección"
+                    className="rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-blue-500"
+                  />
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={form.costo}
+                    onChange={(e) => updateForm("costo", e.target.value)}
+                    placeholder="Costo"
+                    className="rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-blue-500"
+                    required
+                  />
+
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={form.precio}
+                    onChange={(e) => updateForm("precio", e.target.value)}
+                    placeholder="Precio"
+                    className="rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-blue-500"
+                    required
+                  />
+
+                  {modoEdicion ? (
+                    <input
+                      type="number"
+                      value={form.talla}
+                      onChange={(e) => updateForm("talla", e.target.value)}
+                      placeholder="Talla"
+                      className="rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-blue-500"
+                      required
+                    />
+                  ) : crearMasivo ? (
+                    <>
+                      <input
+                        type="number"
+                        value={form.tallaDesde}
+                        onChange={(e) => updateForm("tallaDesde", e.target.value)}
+                        placeholder="Talla desde"
+                        className="rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-blue-500"
+                        required
+                      />
+                      <input
+                        type="number"
+                        value={form.tallaHasta}
+                        onChange={(e) => updateForm("tallaHasta", e.target.value)}
+                        placeholder="Talla hasta"
+                        className="rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-blue-500"
+                        required
+                      />
+                    </>
+                  ) : (
+                    <input
+                      type="number"
+                      value={form.talla}
+                      onChange={(e) => updateForm("talla", e.target.value)}
+                      placeholder="Talla"
+                      className="rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-blue-500"
+                      required
+                    />
+                  )}
                 </div>
-              )}
 
-              <div className="flex justify-end gap-3 pt-2">
+                {!modoEdicion && (
+                  <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
+                    El código del producto se genera automáticamente. Si eliges rango,
+                    se crearán varias tallas del mismo modelo en una sola acción.
+                  </div>
+                )}
+              </form>
+            </div>
+
+            <div className="border-t border-slate-200 p-4 sm:border-0 sm:p-0 sm:pt-4">
+              <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
                   onClick={cerrarModal}
-                  className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+                  className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-100"
                 >
                   Cancelar
                 </button>
 
                 <button
-                  type="submit"
+                  type="button"
+                  onClick={(e) => guardarProducto(e as unknown as React.FormEvent)}
                   disabled={guardando}
-                  className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
+                  className="rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
                 >
                   {guardando
                     ? "Guardando..."
                     : modoEdicion
-                    ? "Actualizar producto"
-                    : "Crear producto(s)"}
+                    ? "Actualizar"
+                    : "Crear"}
                 </button>
               </div>
-            </form>
+            </div>
           </div>
         </div>
       )}

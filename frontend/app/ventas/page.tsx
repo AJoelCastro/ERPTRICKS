@@ -1394,17 +1394,17 @@ export default function VentasPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-        <div className="rounded-3xl bg-white p-6 shadow-sm">
+    <div className="space-y-4 sm:space-y-6">
+      <section className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
+        <div className="rounded-2xl bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
           <div className="mb-4">
-            <h1 className="text-2xl font-black text-slate-900">Ventas POS</h1>
+            <h1 className="text-xl font-black text-slate-900 sm:text-2xl">Ventas POS</h1>
             <p className="text-sm text-slate-500">
               Punto de venta con escaneo continuo, comprobantes y control de adelantos
             </p>
           </div>
 
-          <div className="mb-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <select
               value={almacenId}
               onChange={(e) => setAlmacenId(e.target.value)}
@@ -1450,7 +1450,7 @@ export default function VentasPage() {
             />
           </div>
 
-          <div className="mb-4 grid gap-3 rounded-2xl border border-slate-200 p-4 md:grid-cols-2 xl:grid-cols-5">
+          <div className="mb-4 grid grid-cols-1 gap-3 rounded-2xl border border-slate-200 p-4 sm:grid-cols-2 xl:grid-cols-5">
             <select
               value={ticketWidth}
               onChange={(e) => setTicketWidth(e.target.value as TicketWidth)}
@@ -1520,8 +1520,8 @@ export default function VentasPage() {
                     className="block w-full border-b border-slate-100 px-4 py-3 text-left hover:bg-slate-50"
                   >
                     <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <div className="font-semibold text-slate-900">
+                      <div className="min-w-0">
+                        <div className="truncate font-semibold text-slate-900">
                           {getClienteDisplayName(c)}
                         </div>
                         <div className="text-xs text-slate-500">
@@ -1536,9 +1536,9 @@ export default function VentasPage() {
               </div>
             ) : (
               <div className="mt-3 rounded-2xl bg-blue-50 p-4">
-                <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between">
                   <div>
-                    <div className="mb-1 flex items-center gap-2">
+                    <div className="mb-1 flex flex-wrap items-center gap-2">
                       <div className="font-bold text-slate-900">
                         {getClienteDisplayName(clienteSeleccionado)}
                       </div>
@@ -1560,7 +1560,7 @@ export default function VentasPage() {
                       setRazonSocial("");
                       setDireccionFiscal("");
                     }}
-                    className="rounded-lg border border-slate-300 px-3 py-1 text-xs font-semibold text-slate-700 hover:bg-white"
+                    className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-white"
                   >
                     Cambiar
                   </button>
@@ -1568,7 +1568,7 @@ export default function VentasPage() {
               </div>
             )}
 
-            <div className="mt-3 grid gap-3 md:grid-cols-3">
+            <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-3">
               <input
                 value={docCliente}
                 onChange={(e) => setDocCliente(e.target.value)}
@@ -1593,7 +1593,7 @@ export default function VentasPage() {
           <div className="mb-5 rounded-2xl border border-slate-200 p-4">
             <div className="mb-2 text-sm font-bold text-slate-700">Escaneo POS</div>
 
-            <div className="grid gap-3 md:grid-cols-[1fr_auto_auto]">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-[1fr_auto_auto]">
               <input
                 value={scanInput}
                 onChange={(e) => setScanInput(e.target.value)}
@@ -1635,7 +1635,7 @@ export default function VentasPage() {
                 <div className="overflow-hidden rounded-2xl border border-slate-200 bg-black">
                   <video
                     ref={videoRef}
-                    className="h-[280px] w-full object-cover"
+                    className="h-[240px] w-full object-cover sm:h-[280px]"
                     muted
                     playsInline
                   />
@@ -1668,11 +1668,11 @@ export default function VentasPage() {
                   className="block w-full border-b border-slate-100 px-4 py-3 text-left hover:bg-slate-50"
                 >
                   <div className="flex items-start justify-between gap-3">
-                    <div>
+                    <div className="min-w-0">
                       <div className="font-semibold text-slate-900">
                         {item.producto.modelo} · {item.producto.color} · T{item.producto.talla}
                       </div>
-                      <div className="text-xs text-slate-500">
+                      <div className="break-words text-xs text-slate-500">
                         {item.producto.codigo} · {item.sku} · QR {item.codigoBarras}
                       </div>
                       <div className="text-xs text-slate-500">
@@ -1680,7 +1680,7 @@ export default function VentasPage() {
                       </div>
                     </div>
 
-                    <div className="text-right">
+                    <div className="shrink-0 text-right">
                       <div className="font-bold text-slate-900">
                         {formatMoney(item.producto.precio)}
                       </div>
@@ -1703,8 +1703,8 @@ export default function VentasPage() {
           </div>
         </div>
 
-        <div className="rounded-3xl bg-white p-6 shadow-sm">
-          <div className="mb-4 flex items-center justify-between gap-3">
+        <div className="rounded-2xl bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-xl font-black text-slate-900">Carrito POS</h2>
               <p className="text-sm text-slate-500">Venta actual y totales</p>
@@ -1712,7 +1712,7 @@ export default function VentasPage() {
 
             <button
               onClick={resetVenta}
-              className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+              className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-100 sm:w-auto sm:py-2"
             >
               Limpiar
             </button>
@@ -1730,27 +1730,27 @@ export default function VentasPage() {
                   className="rounded-2xl border border-slate-200 p-4"
                 >
                   <div className="flex items-start justify-between gap-3">
-                    <div>
+                    <div className="min-w-0">
                       <div className="font-bold text-slate-900">
                         {item.modelo} · {item.color} · T{item.talla}
                       </div>
                       <div className="text-xs text-slate-500">
                         {item.material} · {item.taco}
                       </div>
-                      <div className="text-xs text-slate-500">{item.sku}</div>
+                      <div className="break-words text-xs text-slate-500">{item.sku}</div>
 
                       {item.alertaStock === "SIN_STOCK" ? (
-                        <div className="mt-2 rounded-lg bg-red-50 px-2 py-1 text-xs font-bold text-red-700">
+                        <div className="mt-2 inline-block rounded-lg bg-red-50 px-2 py-1 text-xs font-bold text-red-700">
                           SIN STOCK
                         </div>
                       ) : item.alertaStock === "ULTIMOS_PARES" ? (
-                        <div className="mt-2 rounded-lg bg-amber-50 px-2 py-1 text-xs font-bold text-amber-700">
+                        <div className="mt-2 inline-block rounded-lg bg-amber-50 px-2 py-1 text-xs font-bold text-amber-700">
                           ÚLTIMOS PARES
                         </div>
                       ) : null}
                     </div>
 
-                    <div className="text-right">
+                    <div className="shrink-0 text-right">
                       <div className="text-sm font-bold text-slate-900">
                         {formatMoney(item.precioUnitario)}
                       </div>
@@ -1758,11 +1758,11 @@ export default function VentasPage() {
                     </div>
                   </div>
 
-                  <div className="mt-3 flex items-center justify-between gap-3">
+                  <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => changeQty(item.productoId, item.cantidad - 1)}
-                        className="rounded-lg border border-slate-300 px-3 py-1 font-bold"
+                        className="rounded-lg border border-slate-300 px-3 py-2 font-bold"
                       >
                         -
                       </button>
@@ -1778,19 +1778,19 @@ export default function VentasPage() {
                       />
                       <button
                         onClick={() => changeQty(item.productoId, item.cantidad + 1)}
-                        className="rounded-lg border border-slate-300 px-3 py-1 font-bold"
+                        className="rounded-lg border border-slate-300 px-3 py-2 font-bold"
                       >
                         +
                       </button>
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center justify-between gap-3 sm:justify-end">
                       <div className="text-sm font-black text-slate-900">
                         {formatMoney(item.cantidad * item.precioUnitario)}
                       </div>
                       <button
                         onClick={() => removeCartItem(item.productoId)}
-                        className="rounded-lg border border-red-300 px-3 py-1 text-xs font-semibold text-red-700 hover:bg-red-50"
+                        className="rounded-lg border border-red-300 px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50"
                       >
                         Quitar
                       </button>
@@ -1809,7 +1809,7 @@ export default function VentasPage() {
               className="min-h-[80px] w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
             />
 
-            <div className="grid gap-3 md:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <input
                 type="number"
                 step="0.01"
@@ -1866,7 +1866,7 @@ export default function VentasPage() {
         </div>
       </section>
 
-      <section className="rounded-3xl bg-white p-6 shadow-sm">
+      <section className="rounded-2xl bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
         <div className="mb-4">
           <h2 className="text-xl font-black text-slate-900">Ventas registradas</h2>
           <p className="text-sm text-slate-500">
@@ -1874,7 +1874,7 @@ export default function VentasPage() {
           </p>
         </div>
 
-        <div className="mb-4 grid gap-3 md:grid-cols-6">
+        <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-6">
           <input
             value={qVenta}
             onChange={(e) => setQVenta(e.target.value)}
@@ -1930,7 +1930,7 @@ export default function VentasPage() {
           <p className="text-sm text-slate-500">Cargando ventas...</p>
         ) : (
           <>
-            <div className="overflow-x-auto rounded-2xl border border-slate-200">
+            <div className="hidden xl:block overflow-x-auto rounded-2xl border border-slate-200">
               <table className="min-w-full text-sm">
                 <thead className="bg-slate-100 text-left text-slate-700">
                   <tr>
@@ -2045,7 +2045,89 @@ export default function VentasPage() {
               </table>
             </div>
 
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="grid gap-3 xl:hidden">
+              {ventasPagina.map((venta) => (
+                <div
+                  key={venta.id}
+                  className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="font-black text-slate-900">{venta.codigo}</div>
+                      <div className="truncate text-sm font-semibold text-slate-800">
+                        {getVentaClienteNombre(venta)}
+                      </div>
+                      <div className="text-xs text-slate-500">
+                        {(venta.tipoComprobante || "NOTA_VENTA")} {venta.serie || ""}-{venta.numero || ""}
+                      </div>
+                    </div>
+                    {badgeEstado(venta.estado)}
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-600">
+                    <div>
+                      <span className="font-semibold">Fecha:</span> {formatDate(venta.createdAt)}
+                    </div>
+                    <div>
+                      <span className="font-semibold">Método:</span> {venta.metodoPago}
+                    </div>
+                    <div>
+                      <span className="font-semibold">Total:</span> {formatMoney(venta.totalConIgv)}
+                    </div>
+                    <div>
+                      <span className="font-semibold">Adelanto:</span> {formatMoney(venta.adelanto)}
+                    </div>
+                    <div className="col-span-2">
+                      <span className="font-semibold">Saldo:</span> {formatMoney(venta.saldo)}
+                    </div>
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => abrirDetalleVenta(venta.id)}
+                      className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+                    >
+                      Ver
+                    </button>
+
+                    <button
+                      onClick={() => imprimirTicket(venta)}
+                      className="rounded-xl border border-indigo-300 px-4 py-3 text-sm font-semibold text-indigo-700 hover:bg-indigo-50"
+                    >
+                      Imprimir
+                    </button>
+
+                    <button
+                      onClick={() => exportarTicketPdf(venta)}
+                      className="rounded-xl border border-blue-300 px-4 py-3 text-sm font-semibold text-blue-700 hover:bg-blue-50"
+                    >
+                      PDF
+                    </button>
+
+                    {Number(venta.saldo || 0) > 0 ? (
+                      <button
+                        onClick={() => {
+                          setVentaPago(venta);
+                          setMontoPago(String(Number(venta.saldo || 0)));
+                          setMetodoPagoExtra("EFECTIVO");
+                          setNotaPago("");
+                          setModalPagoOpen(true);
+                        }}
+                        className="rounded-xl border border-emerald-300 px-4 py-3 text-sm font-semibold text-emerald-700 hover:bg-emerald-50"
+                      >
+                        Cobrar
+                      </button>
+                    ) : (
+                      <div className="rounded-xl border border-slate-200 px-4 py-3 text-center text-sm text-slate-400">
+                        Sin saldo
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
               <div className="flex items-center gap-2 text-sm text-slate-600">
                 <span>Mostrar</span>
                 <select
@@ -2061,23 +2143,23 @@ export default function VentasPage() {
                 <span>filas</span>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="grid grid-cols-3 gap-2 sm:flex sm:items-center">
                 <button
                   disabled={pagina <= 1}
                   onClick={() => setPagina((p) => Math.max(1, p - 1))}
                   className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold disabled:opacity-50"
                 >
-                  ◀ Anterior
+                  ◀ Ant.
                 </button>
-                <div className="rounded-lg bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700">
-                  Página {pagina} de {totalPaginas}
+                <div className="flex items-center justify-center rounded-lg bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700">
+                  {pagina} / {totalPaginas}
                 </div>
                 <button
                   disabled={pagina >= totalPaginas}
                   onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))}
                   className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold disabled:opacity-50"
                 >
-                  Siguiente ▶
+                  Sig. ▶
                 </button>
               </div>
             </div>
@@ -2086,194 +2168,228 @@ export default function VentasPage() {
       </section>
 
       {detalleOpen && detalleVenta ? (
-        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 p-4">
-          <div className="max-h-[94vh] w-full max-w-5xl overflow-y-auto rounded-3xl bg-white p-6 shadow-xl">
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <div>
-                <h3 className="text-xl font-black text-slate-900">
-                  Venta {detalleVenta.codigo}
-                </h3>
-                <p className="text-sm text-slate-500">
-                  {detalleVenta.tipoComprobante || "NOTA_VENTA"}{" "}
-                  {detalleVenta.serie || ""}-{detalleVenta.numero || ""}
-                </p>
-              </div>
+        <div className="fixed inset-0 z-50 bg-black/40 p-0 sm:flex sm:items-start sm:justify-center sm:p-4">
+          <div className="flex h-dvh w-full flex-col bg-white shadow-xl sm:h-auto sm:max-h-[94vh] sm:max-w-5xl sm:rounded-3xl sm:p-6">
+            <div className="sticky top-0 z-10 border-b border-slate-200 bg-white p-4 sm:static sm:border-0 sm:bg-transparent sm:p-0 sm:pb-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+                <div>
+                  <h3 className="text-xl font-black text-slate-900">
+                    Venta {detalleVenta.codigo}
+                  </h3>
+                  <p className="text-sm text-slate-500">
+                    {detalleVenta.tipoComprobante || "NOTA_VENTA"}{" "}
+                    {detalleVenta.serie || ""}-{detalleVenta.numero || ""}
+                  </p>
+                </div>
 
-              <div className="flex gap-2">
-                <button
-                  onClick={() => imprimirTicket(detalleVenta)}
-                  className="rounded-xl border border-indigo-300 px-4 py-2 text-sm font-semibold text-indigo-700 hover:bg-indigo-50"
-                >
-                  Imprimir
-                </button>
-                <button
-                  onClick={() => exportarTicketPdf(detalleVenta)}
-                  className="rounded-xl border border-blue-300 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50"
-                >
-                  PDF
-                </button>
-                <button
-                  onClick={() => setDetalleOpen(false)}
-                  className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
-                >
-                  Cerrar
-                </button>
-              </div>
-            </div>
-
-            <div className="mb-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-              <div className="rounded-2xl bg-slate-50 p-4">
-                <div className="text-xs font-semibold text-slate-500">Cliente</div>
-                <div className="mt-2 font-bold text-slate-900">
-                  {getVentaClienteNombre(detalleVenta)}
-                </div>
-              </div>
-              <div className="rounded-2xl bg-slate-50 p-4">
-                <div className="text-xs font-semibold text-slate-500">Documento</div>
-                <div className="mt-2 font-bold text-slate-900">
-                  {detalleVenta.docCliente || getClienteDocumento(detalleVenta.cliente)}
-                </div>
-              </div>
-              <div className="rounded-2xl bg-slate-50 p-4">
-                <div className="text-xs font-semibold text-slate-500">Total</div>
-                <div className="mt-2 text-xl font-black text-slate-900">
-                  {formatMoney(detalleVenta.totalConIgv)}
-                </div>
-              </div>
-              <div className="rounded-2xl bg-slate-50 p-4">
-                <div className="text-xs font-semibold text-slate-500">Estado</div>
-                <div className="mt-2">{badgeEstado(detalleVenta.estado)}</div>
-              </div>
-            </div>
-
-            <div className="mb-5 grid gap-4 md:grid-cols-2">
-              <div className="rounded-2xl border border-slate-200 p-4 text-sm">
-                <div>
-                  <b>Almacén:</b> {detalleVenta.almacen.codigo} -{" "}
-                  {detalleVenta.almacen.nombre}
-                </div>
-                <div>
-                  <b>Método pago:</b> {detalleVenta.metodoPago}
-                </div>
-                <div>
-                  <b>Fecha venta:</b> {formatDateTime(detalleVenta.createdAt)}
-                </div>
-                <div>
-                  <b>Fecha envío:</b> {formatDate(detalleVenta.fechaEnvio)}
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-slate-200 p-4 text-sm">
-                <div>
-                  <b>Subtotal:</b> {formatMoney(detalleVenta.subtotalSinIgv)}
-                </div>
-                <div>
-                  <b>IGV:</b> {formatMoney(detalleVenta.igv)}
-                </div>
-                <div>
-                  <b>Adelanto:</b> {formatMoney(detalleVenta.adelanto)}
-                </div>
-                <div>
-                  <b>Saldo:</b> {formatMoney(detalleVenta.saldo)}
+                <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-2">
+                  <button
+                    onClick={() => imprimirTicket(detalleVenta)}
+                    className="rounded-xl border border-indigo-300 px-4 py-3 text-sm font-semibold text-indigo-700 hover:bg-indigo-50 sm:py-2"
+                  >
+                    Imprimir
+                  </button>
+                  <button
+                    onClick={() => exportarTicketPdf(detalleVenta)}
+                    className="rounded-xl border border-blue-300 px-4 py-3 text-sm font-semibold text-blue-700 hover:bg-blue-50 sm:py-2"
+                  >
+                    PDF
+                  </button>
+                  <button
+                    onClick={() => setDetalleOpen(false)}
+                    className="col-span-2 rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-100 sm:col-span-1 sm:py-2"
+                  >
+                    Cerrar
+                  </button>
                 </div>
               </div>
             </div>
 
-            <div className="overflow-x-auto rounded-2xl border border-slate-200">
-              <table className="min-w-full text-sm">
-                <thead className="bg-slate-100 text-left text-slate-700">
-                  <tr>
-                    <th className="px-4 py-3 font-bold">Producto</th>
-                    <th className="px-4 py-3 font-bold">SKU</th>
-                    <th className="px-4 py-3 font-bold">Cantidad</th>
-                    <th className="px-4 py-3 font-bold">Precio</th>
-                    <th className="px-4 py-3 font-bold">Subtotal</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {detalleVenta.detalles.map((d) => (
-                    <tr key={d.id} className="border-t border-slate-200 bg-white">
-                      <td className="px-4 py-3">
-                        {d.modelo} · {d.color} · T{d.talla}
-                      </td>
-                      <td className="px-4 py-3">{d.sku || "-"}</td>
-                      <td className="px-4 py-3">{d.cantidad}</td>
-                      <td className="px-4 py-3">{formatMoney(d.precioUnitario)}</td>
-                      <td className="px-4 py-3">{formatMoney(d.subtotal)}</td>
+            <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-0">
+              <div className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                <div className="rounded-2xl bg-slate-50 p-4">
+                  <div className="text-xs font-semibold text-slate-500">Cliente</div>
+                  <div className="mt-2 font-bold text-slate-900">
+                    {getVentaClienteNombre(detalleVenta)}
+                  </div>
+                </div>
+                <div className="rounded-2xl bg-slate-50 p-4">
+                  <div className="text-xs font-semibold text-slate-500">Documento</div>
+                  <div className="mt-2 font-bold text-slate-900 break-words">
+                    {detalleVenta.docCliente || getClienteDocumento(detalleVenta.cliente)}
+                  </div>
+                </div>
+                <div className="rounded-2xl bg-slate-50 p-4">
+                  <div className="text-xs font-semibold text-slate-500">Total</div>
+                  <div className="mt-2 text-xl font-black text-slate-900">
+                    {formatMoney(detalleVenta.totalConIgv)}
+                  </div>
+                </div>
+                <div className="rounded-2xl bg-slate-50 p-4">
+                  <div className="text-xs font-semibold text-slate-500">Estado</div>
+                  <div className="mt-2">{badgeEstado(detalleVenta.estado)}</div>
+                </div>
+              </div>
+
+              <div className="mb-5 grid gap-4 md:grid-cols-2">
+                <div className="rounded-2xl border border-slate-200 p-4 text-sm">
+                  <div>
+                    <b>Almacén:</b> {detalleVenta.almacen.codigo} -{" "}
+                    {detalleVenta.almacen.nombre}
+                  </div>
+                  <div>
+                    <b>Método pago:</b> {detalleVenta.metodoPago}
+                  </div>
+                  <div>
+                    <b>Fecha venta:</b> {formatDateTime(detalleVenta.createdAt)}
+                  </div>
+                  <div>
+                    <b>Fecha envío:</b> {formatDate(detalleVenta.fechaEnvio)}
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-slate-200 p-4 text-sm">
+                  <div>
+                    <b>Subtotal:</b> {formatMoney(detalleVenta.subtotalSinIgv)}
+                  </div>
+                  <div>
+                    <b>IGV:</b> {formatMoney(detalleVenta.igv)}
+                  </div>
+                  <div>
+                    <b>Adelanto:</b> {formatMoney(detalleVenta.adelanto)}
+                  </div>
+                  <div>
+                    <b>Saldo:</b> {formatMoney(detalleVenta.saldo)}
+                  </div>
+                </div>
+              </div>
+
+              <div className="hidden md:block overflow-x-auto rounded-2xl border border-slate-200">
+                <table className="min-w-full text-sm">
+                  <thead className="bg-slate-100 text-left text-slate-700">
+                    <tr>
+                      <th className="px-4 py-3 font-bold">Producto</th>
+                      <th className="px-4 py-3 font-bold">SKU</th>
+                      <th className="px-4 py-3 font-bold">Cantidad</th>
+                      <th className="px-4 py-3 font-bold">Precio</th>
+                      <th className="px-4 py-3 font-bold">Subtotal</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {detalleVenta.detalles.map((d) => (
+                      <tr key={d.id} className="border-t border-slate-200 bg-white">
+                        <td className="px-4 py-3">
+                          {d.modelo} · {d.color} · T{d.talla}
+                        </td>
+                        <td className="px-4 py-3">{d.sku || "-"}</td>
+                        <td className="px-4 py-3">{d.cantidad}</td>
+                        <td className="px-4 py-3">{formatMoney(d.precioUnitario)}</td>
+                        <td className="px-4 py-3">{formatMoney(d.subtotal)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="space-y-3 md:hidden">
+                {detalleVenta.detalles.map((d) => (
+                  <div key={d.id} className="rounded-2xl border border-slate-200 p-4">
+                    <div className="font-semibold text-slate-900">
+                      {d.modelo} · {d.color} · T{d.talla}
+                    </div>
+                    <div className="mt-2 text-xs text-slate-500 break-words">
+                      SKU: {d.sku || "-"}
+                    </div>
+                    <div className="mt-3 grid grid-cols-2 gap-2 text-sm text-slate-700">
+                      <div>
+                        <span className="font-semibold">Cantidad:</span> {d.cantidad}
+                      </div>
+                      <div>
+                        <span className="font-semibold">Precio:</span> {formatMoney(d.precioUnitario)}
+                      </div>
+                      <div className="col-span-2">
+                        <span className="font-semibold">Subtotal:</span> {formatMoney(d.subtotal)}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         </div>
       ) : null}
 
       {modalPagoOpen && ventaPago ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-xl">
-            <h3 className="mb-3 text-xl font-black text-slate-900">
-              Registrar pago adicional
-            </h3>
+        <div className="fixed inset-0 z-50 bg-black/40 p-0 sm:flex sm:items-center sm:justify-center sm:p-4">
+          <div className="flex h-dvh w-full flex-col bg-white shadow-xl sm:h-auto sm:max-w-lg sm:rounded-3xl sm:p-6">
+            <div className="sticky top-0 z-10 border-b border-slate-200 bg-white p-4 sm:static sm:border-0 sm:bg-transparent sm:p-0">
+              <h3 className="text-xl font-black text-slate-900">
+                Registrar pago adicional
+              </h3>
+            </div>
 
-            <div className="mb-4 rounded-2xl bg-slate-50 p-4 text-sm text-slate-700">
-              <div>
-                <b>Venta:</b> {ventaPago.codigo}
+            <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-0">
+              <div className="mb-4 rounded-2xl bg-slate-50 p-4 text-sm text-slate-700">
+                <div>
+                  <b>Venta:</b> {ventaPago.codigo}
+                </div>
+                <div>
+                  <b>Total:</b> {formatMoney(ventaPago.totalConIgv)}
+                </div>
+                <div>
+                  <b>Adelanto:</b> {formatMoney(ventaPago.adelanto)}
+                </div>
+                <div>
+                  <b>Saldo:</b> {formatMoney(ventaPago.saldo)}
+                </div>
               </div>
-              <div>
-                <b>Total:</b> {formatMoney(ventaPago.totalConIgv)}
-              </div>
-              <div>
-                <b>Adelanto:</b> {formatMoney(ventaPago.adelanto)}
-              </div>
-              <div>
-                <b>Saldo:</b> {formatMoney(ventaPago.saldo)}
+
+              <div className="space-y-3">
+                <input
+                  type="number"
+                  step="0.01"
+                  value={montoPago}
+                  onChange={(e) => setMontoPago(e.target.value)}
+                  placeholder="Monto"
+                  className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
+                />
+
+                <select
+                  value={metodoPagoExtra}
+                  onChange={(e) => setMetodoPagoExtra(e.target.value)}
+                  className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
+                >
+                  <option value="EFECTIVO">EFECTIVO</option>
+                  <option value="YAPE">YAPE</option>
+                  <option value="PLIN">PLIN</option>
+                  <option value="TRANSFERENCIA">TRANSFERENCIA</option>
+                </select>
+
+                <textarea
+                  value={notaPago}
+                  onChange={(e) => setNotaPago(e.target.value)}
+                  placeholder="Nota del pago"
+                  className="min-h-[100px] w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
+                />
               </div>
             </div>
 
-            <div className="space-y-3">
-              <input
-                type="number"
-                step="0.01"
-                value={montoPago}
-                onChange={(e) => setMontoPago(e.target.value)}
-                placeholder="Monto"
-                className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
-              />
-
-              <select
-                value={metodoPagoExtra}
-                onChange={(e) => setMetodoPagoExtra(e.target.value)}
-                className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
-              >
-                <option value="EFECTIVO">EFECTIVO</option>
-                <option value="YAPE">YAPE</option>
-                <option value="PLIN">PLIN</option>
-                <option value="TRANSFERENCIA">TRANSFERENCIA</option>
-              </select>
-
-              <textarea
-                value={notaPago}
-                onChange={(e) => setNotaPago(e.target.value)}
-                placeholder="Nota del pago"
-                className="min-h-[100px] w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
-              />
-            </div>
-
-            <div className="mt-5 flex justify-end gap-2">
-              <button
-                onClick={() => setModalPagoOpen(false)}
-                className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={registrarPagoExtra}
-                disabled={procesando}
-                className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
-              >
-                Registrar pago
-              </button>
+            <div className="border-t border-slate-200 p-4 sm:border-0 sm:p-0 sm:pt-5">
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  onClick={() => setModalPagoOpen(false)}
+                  className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={registrarPagoExtra}
+                  disabled={procesando}
+                  className="rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
+                >
+                  Registrar pago
+                </button>
+              </div>
             </div>
           </div>
         </div>
