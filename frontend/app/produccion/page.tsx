@@ -117,7 +117,6 @@ type ScanPayloadGeneral = {
 type ScanPayloadCaja = {
   type: "OP_CAJA";
   opCodigo: string;
-  sku: string;
 };
 
 type ScanPayload = ScanPayloadGeneral | ScanPayloadCaja;
@@ -338,16 +337,28 @@ async function generateBarcodeDataUrl(value: string) {
   if (!cleanValue) return null;
 
   const canvas = document.createElement("canvas");
+  const scale = 3;
+
+  canvas.width = 900;
+  canvas.height = 240;
+
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+
+  ctx.setTransform(scale, 0, 0, scale, 0, 0);
 
   JsBarcode(canvas, cleanValue, {
     format: "CODE128",
     displayValue: true,
     font: "monospace",
-    fontSize: 11,
-    textMargin: 2,
+    fontOptions: "bold",
+    fontSize: 16,
+    textMargin: 6,
     margin: 0,
-    height: 34,
-    width: 1.4,
+    height: 52,
+    width: 2.2,
+    background: "#ffffff",
+    lineColor: "#000000",
   });
 
   return canvas.toDataURL("image/png");
@@ -715,7 +726,7 @@ export default function ProduccionPage() {
           body: JSON.stringify({
             cantidadProcesada: 1,
             cantidadObservada: 0,
-            observaciones: `Movimiento rápido por escaneo · SKU ${lastScannedCaja.sku}`,
+            observaciones: `Movimiento rápido por escaneo · OP ${lastScannedCaja.opCodigo}`,
             usuarioEmail: "admin@erp.com",
           }),
         }
@@ -777,10 +788,10 @@ export default function ProduccionPage() {
       const tacoY = 62;
       const coleccionY = 72;
 
-      const barcodeX = leftX;
-      const barcodeY = 82;
-      const barcodeW = leftW;
-      const barcodeH = 28;
+      const barcodeX = 18;
+      const barcodeY = 84;
+      const barcodeW = rightColX - barcodeX - 10;
+      const barcodeH = 38;
 
       const entries = Object.entries(orden.corridaJson || {})
         .map(([talla, cantidad]) => ({
@@ -823,23 +834,26 @@ export default function ProduccionPage() {
 
         const item = etiquetas[i];
 
-        const skuVisual = `${safeUpper(orden.productoBase.codigo)}-${String(item.talla)}`;
-
         const payload: ScanPayloadCaja = {
           type: "OP_CAJA",
           opCodigo: orden.codigo,
-          sku: skuVisual,
         };
 
         const qrUrl = await QRCode.toDataURL(JSON.stringify(payload), {
           margin: 1,
-          width: 320,
+          width: 420,
+          errorCorrectionLevel: "H",
         });
 
         const barcodeValue = String(
-          orden.codigoBarrasPorTalla?.[String(item.talla)] || ""
+          orden.codigoBarrasPorTalla?.[String(item.talla)] ||
+            orden.productoBase?.codigoBarras ||
+            ""
         ).trim();
-        const barcodeUrl = barcodeValue ? await generateBarcodeDataUrl(barcodeValue) : null;
+
+        const barcodeUrl = barcodeValue
+          ? await generateBarcodeDataUrl(barcodeValue)
+          : null;
 
         drawPremiumFrame(doc, frameX, frameY, frameW, frameH);
 
@@ -901,9 +915,9 @@ export default function ProduccionPage() {
           doc.addImage(barcodeUrl, "PNG", barcodeX, barcodeY, barcodeW, barcodeH);
         } else {
           doc.setFont("helvetica", "bold");
-          doc.setFontSize(7);
+          doc.setFontSize(8);
           doc.setTextColor(120, 120, 120);
-          doc.text("SIN CÓDIGO DE BARRAS", barcodeX + barcodeW / 2, barcodeY + 16, {
+          doc.text("SIN CÓDIGO DE BARRAS", barcodeX + barcodeW / 2, barcodeY + 20, {
             align: "center",
           });
         }
@@ -1150,8 +1164,8 @@ export default function ProduccionPage() {
 
         setCantidadProcesada("1");
         setCantidadObservada("0");
-        setObservacionesFinalizar(`Movimiento rápido por escaneo · SKU ${payload.sku}`);
-        setScannerStatus(`Caja detectada · OP ${payload.opCodigo} · SKU ${payload.sku}`);
+        setObservacionesFinalizar(`Movimiento rápido por escaneo · OP ${payload.opCodigo}`);
+        setScannerStatus(`Caja detectada · OP ${payload.opCodigo}`);
         setLastScannedCaja(payload);
         setScanModalOpen(false);
         return;
@@ -1621,7 +1635,6 @@ export default function ProduccionPage() {
                     <h3 className="mb-2 text-lg font-black text-slate-900">Caja escaneada</h3>
                     <div className="space-y-1 text-sm text-slate-700">
                       <div><b>OP:</b> {lastScannedCaja.opCodigo}</div>
-                      <div><b>SKU:</b> {lastScannedCaja.sku}</div>
                     </div>
 
                     <button
