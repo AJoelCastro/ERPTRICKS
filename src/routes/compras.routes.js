@@ -39,6 +39,95 @@ async function generarCodigoBarrasUnico(prisma) {
   }
 }
 
+function mapProductoCatalogo(producto) {
+  const descripcion = [
+    producto.modelo,
+    producto.color,
+    producto.material,
+    producto.taco,
+    `T${producto.talla}`,
+  ]
+    .filter(Boolean)
+    .join(" - ");
+
+  return {
+    tipoItem: "PRODUCTO",
+    itemId: producto.id,
+    productoId: producto.id,
+    codigo: producto.codigo,
+    nombre: producto.modelo || producto.codigo,
+    descripcion,
+    unidadMedida: "PAR",
+    costoReferencial: Number(producto.costo || 0),
+    precioReferencial: Number(producto.precio || 0),
+    estado: producto.estado,
+    raw: producto,
+  };
+}
+
+function mapSimpleCatalogo(tipoItem, item) {
+  return {
+    tipoItem,
+    itemId: item.id,
+    productoId: null,
+    codigo: item.codigo,
+    nombre: item.nombre,
+    descripcion: item.descripcion || item.nombre || item.codigo,
+    unidadMedida: item.unidadMedida || "UND",
+    costoReferencial: Number(item.costoReferencial || 0),
+    precioReferencial: null,
+    estado: item.estado,
+    raw: item,
+  };
+}
+
+async function obtenerCatalogoCompra(prisma) {
+  const promesas = [
+    prisma.producto.findMany({
+      where: { estado: "ACTIVO" },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.material?.findMany
+      ? prisma.material.findMany({
+          where: { estado: "ACTIVO" },
+          orderBy: { createdAt: "desc" },
+        })
+      : Promise.resolve([]),
+    prisma.insumo?.findMany
+      ? prisma.insumo.findMany({
+          where: { estado: "ACTIVO" },
+          orderBy: { createdAt: "desc" },
+        })
+      : Promise.resolve([]),
+  ];
+
+  const [productos, materiales, insumos] = await Promise.all(promesas);
+
+  return [
+    ...(productos || []).map(mapProductoCatalogo),
+    ...(materiales || []).map((x) => mapSimpleCatalogo("MATERIAL", x)),
+    ...(insumos || []).map((x) => mapSimpleCatalogo("INSUMO", x)),
+  ];
+}
+
+// GET /compras/catalogo-items
+router.get("/catalogo-items", async (req, res) => {
+  try {
+    const prisma = req.app.locals.prisma;
+    const data = await obtenerCatalogoCompra(prisma);
+
+    res.json({
+      ok: true,
+      data,
+    });
+  } catch (error) {
+    res.status(500).json({
+      ok: false,
+      error: error.message,
+    });
+  }
+});
+
 // GET /compras
 router.get("/", async (req, res) => {
   try {
@@ -54,14 +143,53 @@ router.get("/", async (req, res) => {
 
     if (q) {
       const texto = String(q).trim();
+
       where.OR = [
         { codigo: { contains: texto, mode: "insensitive" } },
-        { proveedor: { codigo: { contains: texto, mode: "insensitive" } } },
-        { proveedor: { dni: { contains: texto, mode: "insensitive" } } },
-        { proveedor: { ruc: { contains: texto, mode: "insensitive" } } },
-        { proveedor: { nombres: { contains: texto, mode: "insensitive" } } },
-        { proveedor: { apellidos: { contains: texto, mode: "insensitive" } } },
-        { proveedor: { razonSocial: { contains: texto, mode: "insensitive" } } },
+        {
+          proveedor: {
+            codigo: { contains: texto, mode: "insensitive" },
+          },
+        },
+        {
+          proveedor: {
+            dni: { contains: texto, mode: "insensitive" },
+          },
+        },
+        {
+          proveedor: {
+            ruc: { contains: texto, mode: "insensitive" },
+          },
+        },
+        {
+          proveedor: {
+            nombres: { contains: texto, mode: "insensitive" },
+          },
+        },
+        {
+          proveedor: {
+            apellidos: { contains: texto, mode: "insensitive" },
+          },
+        },
+        {
+          proveedor: {
+            razonSocial: { contains: texto, mode: "insensitive" },
+          },
+        },
+        {
+          detalles: {
+            some: {
+              codigoItem: { contains: texto, mode: "insensitive" },
+            },
+          },
+        },
+        {
+          detalles: {
+            some: {
+              descripcionItem: { contains: texto, mode: "insensitive" },
+            },
+          },
+        },
       ];
     }
 
@@ -195,21 +323,42 @@ router.post("/", async (req, res) => {
 
     for (const item of detalle) {
       const {
+        tipoItem,
+        itemId,
         productoId,
+        codigoItem,
+        descripcionItem,
+        unidadMedida,
         cantidad,
         costoUnitario,
         observaciones: obsLinea,
       } = item;
 
-      if (!productoId || !cantidad || costoUnitario === undefined) {
+      if (
+        !tipoItem ||
+        !itemId ||
+        !codigoItem ||
+        !descripcionItem ||
+        !cantidad ||
+        costoUnitario === undefined
+      ) {
         return res.status(400).json({
           ok: false,
-          error: "Cada línea debe tener productoId, cantidad y costoUnitario",
+          error:
+            "Cada línea debe tener tipoItem, itemId, codigoItem, descripcionItem, cantidad y costoUnitario",
         });
       }
 
+      const tipoNormalizado = normalizarTexto(tipoItem);
       const cantidadNum = Number(cantidad);
       const costoNum = Number(costoUnitario);
+
+      if (!["PRODUCTO", "MATERIAL", "INSUMO"].includes(tipoNormalizado)) {
+        return res.status(400).json({
+          ok: false,
+          error: `Tipo de ítem inválido: ${tipoItem}`,
+        });
+      }
 
       if (isNaN(cantidadNum) || cantidadNum <= 0) {
         return res.status(400).json({
@@ -225,22 +374,59 @@ router.post("/", async (req, res) => {
         });
       }
 
-      const producto = await prisma.producto.findUnique({
-        where: { id: productoId },
-      });
+      let productoRelacionado = null;
 
-      if (!producto) {
-        return res.status(404).json({
-          ok: false,
-          error: `Producto no encontrado: ${productoId}`,
+      if (tipoNormalizado === "PRODUCTO") {
+        const producto = await prisma.producto.findUnique({
+          where: { id: productoId || itemId },
         });
+
+        if (!producto) {
+          return res.status(404).json({
+            ok: false,
+            error: `Producto no encontrado: ${productoId || itemId}`,
+          });
+        }
+
+        productoRelacionado = producto;
+      } else if (tipoNormalizado === "MATERIAL") {
+        if (prisma.material?.findUnique) {
+          const material = await prisma.material.findUnique({
+            where: { id: itemId },
+          });
+
+          if (!material) {
+            return res.status(404).json({
+              ok: false,
+              error: `Material no encontrado: ${itemId}`,
+            });
+          }
+        }
+      } else if (tipoNormalizado === "INSUMO") {
+        if (prisma.insumo?.findUnique) {
+          const insumo = await prisma.insumo.findUnique({
+            where: { id: itemId },
+          });
+
+          if (!insumo) {
+            return res.status(404).json({
+              ok: false,
+              error: `Insumo no encontrado: ${itemId}`,
+            });
+          }
+        }
       }
 
       const subtotalLinea = Number((cantidadNum * costoNum).toFixed(2));
       subtotalBruto += subtotalLinea;
 
       detallePreparado.push({
-        productoId: producto.id,
+        tipoItem: tipoNormalizado,
+        itemId,
+        productoId: tipoNormalizado === "PRODUCTO" ? productoRelacionado.id : null,
+        codigoItem,
+        descripcionItem,
+        unidadMedida: unidadMedida || "UND",
         cantidad: cantidadNum,
         costoUnitario: costoNum,
         subtotal: subtotalLinea,
@@ -524,8 +710,17 @@ router.post("/:id/ingresar-inventario", async (req, res) => {
 
     const resultado = await prisma.$transaction(async (tx) => {
       const movimientos = [];
+      let productosProcesados = 0;
+      let itemsNoInventariables = 0;
 
       for (const d of compra.detalles) {
+        const cantidadNum = Number(d.cantidad);
+
+        if (d.tipoItem !== "PRODUCTO" || !d.productoId || !d.producto) {
+          itemsNoInventariables += 1;
+          continue;
+        }
+
         let inventario = await tx.inventario.findFirst({
           where: {
             productoId: d.productoId,
@@ -533,7 +728,6 @@ router.post("/:id/ingresar-inventario", async (req, res) => {
           },
         });
 
-        const cantidadNum = Number(d.cantidad);
         let stockAnterior = 0;
         let stockNuevo = cantidadNum;
 
@@ -580,6 +774,7 @@ router.post("/:id/ingresar-inventario", async (req, res) => {
         });
 
         movimientos.push(movimiento);
+        productosProcesados += 1;
       }
 
       const compraActualizada = await tx.compra.update({
@@ -590,13 +785,27 @@ router.post("/:id/ingresar-inventario", async (req, res) => {
         },
       });
 
+      const detalleHistorial = [
+        productosProcesados > 0
+          ? `${productosProcesados} línea(s) de producto ingresadas a inventario`
+          : null,
+        itemsNoInventariables > 0
+          ? `${itemsNoInventariables} línea(s) de material/insumo marcadas como recibidas`
+          : null,
+      ]
+        .filter(Boolean)
+        .join(". ");
+
       await tx.historialCompra.create({
         data: {
           compraId: compra.id,
           tipoEvento: "INGRESO_INVENTARIO",
           estadoAnterior: compra.estadoRecepcion,
           estadoNuevo: "INGRESADA",
-          detalle: nota || "Mercadería ingresada al inventario",
+          detalle:
+            nota ||
+            detalleHistorial ||
+            "Compra recibida correctamente",
           usuarioEmail: usuarioEmail || "admin@erp.com",
         },
       });
@@ -604,12 +813,14 @@ router.post("/:id/ingresar-inventario", async (req, res) => {
       return {
         compraActualizada,
         movimientos,
+        productosProcesados,
+        itemsNoInventariables,
       };
     });
 
     res.json({
       ok: true,
-      message: "Compra ingresada al inventario correctamente",
+      message: "Compra procesada correctamente",
       data: resultado,
     });
   } catch (error) {
