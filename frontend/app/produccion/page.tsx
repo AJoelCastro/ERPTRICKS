@@ -3,11 +3,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import jsPDF from "jspdf";
 import QRCode from "qrcode";
+import JsBarcode from "jsbarcode";
 import { svg2pdf } from "svg2pdf.js";
 
 type Producto = {
   id: string;
   codigo: string;
+  codigoBarras?: string | null;
   modelo: string;
   color: string;
   material: string;
@@ -292,7 +294,6 @@ function normalizeScannerText(raw: string) {
 
   text = text.replace(/[\r\n\t]+/g, "").trim();
 
-  // Casos comunes de lectores con layout raro
   text = text
     .replace(/¨/g, "{")
     .replace(/\*/g, "}")
@@ -310,7 +311,6 @@ function normalizeScannerText(raw: string) {
 
   text = text.replace(/\u0000/g, "").trim();
 
-  // Intenta corregir apertura/cierre si quedaron dañados
   if (!text.startsWith("{") && text.includes('"type"')) {
     text = `{${text}`;
   }
@@ -318,7 +318,6 @@ function normalizeScannerText(raw: string) {
     text = `${text}}`;
   }
 
-  // Limpieza de comas repetidas o separadores raros
   text = text
     .replace(/,,+/g, ",")
     .replace(/"\s*,\s*"/g, '","')
@@ -327,6 +326,26 @@ function normalizeScannerText(raw: string) {
     .replace(/^\s+|\s+$/g, "");
 
   return text;
+}
+
+async function generateBarcodeDataUrl(value: string) {
+  const cleanValue = String(value || "").trim();
+  if (!cleanValue) return null;
+
+  const canvas = document.createElement("canvas");
+
+  JsBarcode(canvas, cleanValue, {
+    format: "CODE128",
+    displayValue: true,
+    font: "monospace",
+    fontSize: 11,
+    textMargin: 2,
+    margin: 0,
+    height: 34,
+    width: 1.4,
+  });
+
+  return canvas.toDataURL("image/png");
 }
 
 export default function ProduccionPage() {
@@ -463,7 +482,8 @@ export default function ProduccionPage() {
         o.codigo.toLowerCase().includes(texto) ||
         o.modelo.toLowerCase().includes(texto) ||
         o.color.toLowerCase().includes(texto) ||
-        String(o.productoBase?.codigo || "").toLowerCase().includes(texto);
+        String(o.productoBase?.codigo || "").toLowerCase().includes(texto) ||
+        String(o.productoBase?.codigoBarras || "").toLowerCase().includes(texto);
 
       const matchEstado = !estadoFiltro || o.estadoGeneral === estadoFiltro;
       const matchEtapa = !etapaFiltro || o.etapaActual === etapaFiltro;
@@ -752,9 +772,10 @@ export default function ProduccionPage() {
       const tacoY = 62;
       const coleccionY = 72;
 
-      const skuY = 88;
-      const prodY = 98;
-      const opY = 108;
+      const barcodeX = leftX;
+      const barcodeY = 82;
+      const barcodeW = leftW;
+      const barcodeH = 28;
 
       const entries = Object.entries(orden.corridaJson || {})
         .map(([talla, cantidad]) => ({
@@ -809,6 +830,9 @@ export default function ProduccionPage() {
           margin: 1,
           width: 320,
         });
+
+        const barcodeValue = String(orden.productoBase?.codigoBarras || "").trim();
+        const barcodeUrl = barcodeValue ? await generateBarcodeDataUrl(barcodeValue) : null;
 
         drawPremiumFrame(doc, frameX, frameY, frameW, frameH);
 
@@ -866,13 +890,16 @@ export default function ProduccionPage() {
 
         doc.addImage(qrUrl, "PNG", qrX, qrY, qrSize, qrSize);
 
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(5.7);
-        doc.setTextColor(0, 0, 0);
-        doc.text(truncateText(doc, skuVisual, frameW - 24), leftX, skuY);
-
-        doc.text(`PROD ${safeUpper(orden.productoBase.codigo)}`, leftX, prodY);
-        doc.text(orden.codigo, leftX, opY);
+        if (barcodeUrl) {
+          doc.addImage(barcodeUrl, "PNG", barcodeX, barcodeY, barcodeW, barcodeH);
+        } else {
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(7);
+          doc.setTextColor(120, 120, 120);
+          doc.text("SIN CÓDIGO DE BARRAS", barcodeX + barcodeW / 2, barcodeY + 16, {
+            align: "center",
+          });
+        }
       }
 
       doc.save(`${orden.codigo}-etiquetas-caja.pdf`);
@@ -1484,6 +1511,7 @@ export default function ProduccionPage() {
                   <div className="grid gap-3 text-sm text-slate-700 md:grid-cols-2">
                     <div><b>Código:</b> {ordenActiva.codigo}</div>
                     <div><b>Producto base:</b> {ordenActiva.productoBase.codigo}</div>
+                    <div><b>Código barras:</b> {ordenActiva.productoBase.codigoBarras || "-"}</div>
                     <div><b>Modelo:</b> {ordenActiva.modelo}</div>
                     <div><b>Color:</b> {ordenActiva.color}</div>
                     <div><b>Material:</b> {ordenActiva.material || "-"}</div>
