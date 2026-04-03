@@ -313,27 +313,13 @@ export default function ProveedoresPage() {
       const matchQ =
         !t ||
         p.codigo.toLowerCase().includes(t) ||
-        String(p.dni || "")
-          .toLowerCase()
-          .includes(t) ||
-        String(p.ruc || "")
-          .toLowerCase()
-          .includes(t) ||
-        String(p.nombres || "")
-          .toLowerCase()
-          .includes(t) ||
-        String(p.apellidos || "")
-          .toLowerCase()
-          .includes(t) ||
-        String(p.razonSocial || "")
-          .toLowerCase()
-          .includes(t) ||
-        String(p.telefono || "")
-          .toLowerCase()
-          .includes(t) ||
-        String(p.contacto || "")
-          .toLowerCase()
-          .includes(t);
+        String(p.dni || "").toLowerCase().includes(t) ||
+        String(p.ruc || "").toLowerCase().includes(t) ||
+        String(p.nombres || "").toLowerCase().includes(t) ||
+        String(p.apellidos || "").toLowerCase().includes(t) ||
+        String(p.razonSocial || "").toLowerCase().includes(t) ||
+        String(p.telefono || "").toLowerCase().includes(t) ||
+        String(p.contacto || "").toLowerCase().includes(t);
 
       const matchTipo = !tipoFiltro || p.tipoProveedor === tipoFiltro;
       const matchEstado = !estadoFiltro || p.estado === estadoFiltro;
@@ -439,14 +425,14 @@ export default function ProveedoresPage() {
     return (
       <div className="grid gap-3 md:grid-cols-2">
         <div className="md:col-span-2">
-          <label className="mb-1 block text-sm font-semibold text-slate-700">
+          <label className="mb-2 block text-sm font-semibold text-slate-700">
             Tipo de proveedor
           </label>
-          <div className="flex gap-3">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <button
               type="button"
               onClick={() => setTipoProveedor("PERSONA_NATURAL")}
-              className={`rounded-xl px-4 py-2 text-sm font-semibold ${
+              className={`rounded-xl px-4 py-3 text-sm font-semibold ${
                 tipoProveedor === "PERSONA_NATURAL"
                   ? "bg-slate-900 text-white"
                   : "border border-slate-300 text-slate-700"
@@ -457,7 +443,7 @@ export default function ProveedoresPage() {
             <button
               type="button"
               onClick={() => setTipoProveedor("PERSONA_JURIDICA")}
-              className={`rounded-xl px-4 py-2 text-sm font-semibold ${
+              className={`rounded-xl px-4 py-3 text-sm font-semibold ${
                 tipoProveedor === "PERSONA_JURIDICA"
                   ? "bg-slate-900 text-white"
                   : "border border-slate-300 text-slate-700"
@@ -598,11 +584,11 @@ export default function ProveedoresPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-3xl bg-white p-6 shadow-sm">
-        <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+    <div className="space-y-4 sm:space-y-6">
+      <section className="rounded-2xl bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
+        <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-black text-slate-900">Proveedores</h1>
+            <h1 className="text-xl font-black text-slate-900 sm:text-2xl">Proveedores</h1>
             <p className="text-sm text-slate-500">
               Gestión completa de proveedores naturales y jurídicos
             </p>
@@ -610,53 +596,53 @@ export default function ProveedoresPage() {
 
           <button
             onClick={abrirNuevo}
-            className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+            className="w-full rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700 sm:w-auto sm:py-2"
           >
             + Nuevo proveedor
           </button>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
             <div className="text-sm font-semibold text-slate-500">Total</div>
-            <div className="mt-2 text-3xl font-black text-slate-900">
+            <div className="mt-2 text-2xl font-black text-slate-900 sm:text-3xl">
               {resumen.total}
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
             <div className="text-sm font-semibold text-slate-500">Activos</div>
-            <div className="mt-2 text-3xl font-black text-emerald-700">
+            <div className="mt-2 text-2xl font-black text-emerald-700 sm:text-3xl">
               {resumen.activos}
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
             <div className="text-sm font-semibold text-slate-500">Inactivos</div>
-            <div className="mt-2 text-3xl font-black text-red-700">
+            <div className="mt-2 text-2xl font-black text-red-700 sm:text-3xl">
               {resumen.inactivos}
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
             <div className="text-sm font-semibold text-slate-500">Naturales</div>
-            <div className="mt-2 text-3xl font-black text-violet-700">
+            <div className="mt-2 text-2xl font-black text-violet-700 sm:text-3xl">
               {resumen.naturales}
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
             <div className="text-sm font-semibold text-slate-500">Jurídicos</div>
-            <div className="mt-2 text-3xl font-black text-blue-700">
+            <div className="mt-2 text-2xl font-black text-blue-700 sm:text-3xl">
               {resumen.juridicos}
             </div>
           </div>
         </div>
       </section>
 
-      <section className="rounded-3xl bg-white p-6 shadow-sm">
+      <section className="rounded-2xl bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
         <div className="mb-4">
-          <h2 className="text-xl font-black text-slate-900">
+          <h2 className="text-lg font-black text-slate-900 sm:text-xl">
             Lista de proveedores
           </h2>
           <p className="text-sm text-slate-500">
@@ -664,7 +650,7 @@ export default function ProveedoresPage() {
           </p>
         </div>
 
-        <div className="mb-4 grid gap-3 md:grid-cols-3">
+        <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-3">
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
@@ -697,7 +683,7 @@ export default function ProveedoresPage() {
           <p className="text-sm text-slate-500">Cargando proveedores...</p>
         ) : (
           <>
-            <div className="overflow-x-auto rounded-2xl border border-slate-200">
+            <div className="hidden xl:block overflow-x-auto rounded-2xl border border-slate-200">
               <table className="min-w-full text-sm">
                 <thead className="bg-slate-100 text-left text-slate-700">
                   <tr>
@@ -810,7 +796,82 @@ export default function ProveedoresPage() {
               </table>
             </div>
 
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="grid gap-3 xl:hidden">
+              {proveedoresPagina.length === 0 ? (
+                <div className="rounded-2xl border border-slate-200 bg-white px-4 py-10 text-center text-sm text-slate-500">
+                  No hay proveedores para esos filtros.
+                </div>
+              ) : (
+                proveedoresPagina.map((p) => (
+                  <div
+                    key={p.id}
+                    className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="font-black text-slate-900">{p.codigo}</div>
+                        <div className="mt-1 flex flex-wrap gap-2">
+                          {badgeTipo(p.tipoProveedor)}
+                          {badgeEstado(p.estado)}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 space-y-2 text-sm text-slate-700">
+                      <div>
+                        <span className="font-semibold">Nombre:</span>{" "}
+                        {getProveedorNombre(p)}
+                      </div>
+                      <div>
+                        <span className="font-semibold">Documento:</span>{" "}
+                        {getProveedorDocumento(p)}
+                      </div>
+                      <div>
+                        <span className="font-semibold">Teléfono:</span>{" "}
+                        {p.telefono || "-"}
+                      </div>
+                      <div>
+                        <span className="font-semibold">Email/Contacto:</span>{" "}
+                        {p.contacto || p.email || "-"}
+                      </div>
+                      <div>
+                        <span className="font-semibold">Registro:</span>{" "}
+                        {formatDate(p.createdAt)}
+                      </div>
+                    </div>
+
+                    <div className="mt-4 grid grid-cols-2 gap-2">
+                      <button
+                        onClick={() => abrirEditar(p)}
+                        className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+                      >
+                        Editar
+                      </button>
+
+                      {p.estado === "ACTIVO" ? (
+                        <button
+                          disabled={procesando}
+                          onClick={() => cambiarEstado(p, "INACTIVO")}
+                          className="rounded-xl border border-red-300 px-4 py-3 text-sm font-semibold text-red-700 hover:bg-red-50 disabled:opacity-60"
+                        >
+                          Inactivar
+                        </button>
+                      ) : (
+                        <button
+                          disabled={procesando}
+                          onClick={() => cambiarEstado(p, "ACTIVO")}
+                          className="rounded-xl border border-emerald-300 px-4 py-3 text-sm font-semibold text-emerald-700 hover:bg-emerald-50 disabled:opacity-60"
+                        >
+                          Activar
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
               <div className="flex items-center gap-2 text-sm text-slate-600">
                 <span>Mostrar</span>
                 <select
@@ -826,23 +887,23 @@ export default function ProveedoresPage() {
                 <span>filas</span>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="grid grid-cols-3 gap-2 sm:flex sm:items-center">
                 <button
                   disabled={pagina <= 1}
                   onClick={() => setPagina((p) => Math.max(1, p - 1))}
                   className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold disabled:opacity-50"
                 >
-                  ◀ Anterior
+                  ◀ Ant.
                 </button>
-                <div className="rounded-lg bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700">
-                  Página {pagina} de {totalPaginas}
+                <div className="flex items-center justify-center rounded-lg bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700">
+                  {pagina} / {totalPaginas}
                 </div>
                 <button
                   disabled={pagina >= totalPaginas}
                   onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))}
                   className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold disabled:opacity-50"
                 >
-                  Siguiente ▶
+                  Sig. ▶
                 </button>
               </div>
             </div>
@@ -851,84 +912,96 @@ export default function ProveedoresPage() {
       </section>
 
       {modalNuevo && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="max-h-[94vh] w-full max-w-3xl overflow-y-auto rounded-3xl bg-white p-6 shadow-xl">
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <div>
-                <h3 className="text-xl font-black text-slate-900">
-                  Nuevo proveedor
-                </h3>
-                <p className="text-sm text-slate-500">
-                  Registro de persona natural o jurídica
-                </p>
-              </div>
+        <div className="fixed inset-0 z-50 bg-black/40 p-0 sm:flex sm:items-center sm:justify-center sm:p-4">
+          <div className="flex h-dvh w-full flex-col bg-white shadow-xl sm:h-auto sm:max-h-[94vh] sm:max-w-3xl sm:rounded-3xl">
+            <div className="sticky top-0 z-10 border-b border-slate-200 bg-white p-4 sm:static sm:rounded-t-3xl">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h3 className="text-xl font-black text-slate-900">
+                    Nuevo proveedor
+                  </h3>
+                  <p className="text-sm text-slate-500">
+                    Registro de persona natural o jurídica
+                  </p>
+                </div>
 
-              <button
-                onClick={() => setModalNuevo(false)}
-                className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700"
-              >
-                Cerrar
-              </button>
+                <button
+                  onClick={() => setModalNuevo(false)}
+                  className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 sm:px-4 sm:py-2"
+                >
+                  Cerrar
+                </button>
+              </div>
             </div>
 
-            <FormProveedor />
+            <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
+              <FormProveedor />
+            </div>
 
-            <div className="mt-5 flex justify-end gap-2">
-              <button
-                onClick={() => setModalNuevo(false)}
-                className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={crearProveedor}
-                disabled={procesando}
-                className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
-              >
-                Guardar proveedor
-              </button>
+            <div className="border-t border-slate-200 p-4 sm:rounded-b-3xl sm:p-6">
+              <div className="grid grid-cols-2 gap-2 sm:flex sm:justify-end">
+                <button
+                  onClick={() => setModalNuevo(false)}
+                  className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={crearProveedor}
+                  disabled={procesando}
+                  className="rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
+                >
+                  Guardar
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
 
       {modalEditar && proveedorEditando && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="max-h-[94vh] w-full max-w-3xl overflow-y-auto rounded-3xl bg-white p-6 shadow-xl">
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <div>
-                <h3 className="text-xl font-black text-slate-900">
-                  Editar proveedor
-                </h3>
-                <p className="text-sm text-slate-500">
-                  {proveedorEditando.codigo} · {getProveedorNombre(proveedorEditando)}
-                </p>
-              </div>
+        <div className="fixed inset-0 z-50 bg-black/40 p-0 sm:flex sm:items-center sm:justify-center sm:p-4">
+          <div className="flex h-dvh w-full flex-col bg-white shadow-xl sm:h-auto sm:max-h-[94vh] sm:max-w-3xl sm:rounded-3xl">
+            <div className="sticky top-0 z-10 border-b border-slate-200 bg-white p-4 sm:static sm:rounded-t-3xl">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h3 className="text-xl font-black text-slate-900">
+                    Editar proveedor
+                  </h3>
+                  <p className="text-sm text-slate-500">
+                    {proveedorEditando.codigo} · {getProveedorNombre(proveedorEditando)}
+                  </p>
+                </div>
 
-              <button
-                onClick={() => setModalEditar(false)}
-                className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700"
-              >
-                Cerrar
-              </button>
+                <button
+                  onClick={() => setModalEditar(false)}
+                  className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 sm:px-4 sm:py-2"
+                >
+                  Cerrar
+                </button>
+              </div>
             </div>
 
-            <FormProveedor />
+            <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
+              <FormProveedor />
+            </div>
 
-            <div className="mt-5 flex justify-end gap-2">
-              <button
-                onClick={() => setModalEditar(false)}
-                className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={guardarEdicion}
-                disabled={procesando}
-                className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
-              >
-                Guardar cambios
-              </button>
+            <div className="border-t border-slate-200 p-4 sm:rounded-b-3xl sm:p-6">
+              <div className="grid grid-cols-2 gap-2 sm:flex sm:justify-end">
+                <button
+                  onClick={() => setModalEditar(false)}
+                  className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={guardarEdicion}
+                  disabled={procesando}
+                  className="rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
+                >
+                  Guardar cambios
+                </button>
+              </div>
             </div>
           </div>
         </div>
