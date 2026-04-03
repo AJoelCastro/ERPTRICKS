@@ -285,6 +285,50 @@ async function drawSvgLogo(
   });
 }
 
+function normalizeScannerText(raw: string) {
+  let text = String(raw || "").trim();
+
+  if (!text) return text;
+
+  text = text.replace(/[\r\n\t]+/g, "").trim();
+
+  // Casos comunes de lectores con layout raro
+  text = text
+    .replace(/¨/g, "{")
+    .replace(/\*/g, "}")
+    .replace(/\[/g, '"')
+    .replace(/]/g, '"')
+    .replace(/Ñ/g, ":")
+    .replace(/\?/g, "_")
+    .replace(/'/g, "-")
+    .replace(/`/g, '"')
+    .replace(/´/g, '"')
+    .replace(/“|”/g, '"')
+    .replace(/‘|’/g, "-")
+    .replace(/＋/g, ":")
+    .replace(/\+/g, ":");
+
+  text = text.replace(/\u0000/g, "").trim();
+
+  // Intenta corregir apertura/cierre si quedaron dañados
+  if (!text.startsWith("{") && text.includes('"type"')) {
+    text = `{${text}`;
+  }
+  if (!text.endsWith("}") && text.includes('"type"')) {
+    text = `${text}}`;
+  }
+
+  // Limpieza de comas repetidas o separadores raros
+  text = text
+    .replace(/,,+/g, ",")
+    .replace(/"\s*,\s*"/g, '","')
+    .replace(/"\s*:\s*"/g, '":"')
+    .replace(/"\s*}\s*$/g, '"}')
+    .replace(/^\s+|\s+$/g, "");
+
+  return text;
+}
+
 export default function ProduccionPage() {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
@@ -992,7 +1036,8 @@ export default function ProduccionPage() {
 
   async function procesarTextoEscaneado(raw?: string) {
     try {
-      const text = String(raw ?? scannerInput).trim();
+      const originalText = String(raw ?? scannerInput).trim();
+      const text = normalizeScannerText(originalText);
 
       if (!text) {
         alert("No hay contenido escaneado.");
@@ -1004,7 +1049,10 @@ export default function ProduccionPage() {
       try {
         payload = JSON.parse(text) as ScanPayload;
       } catch {
-        const encontrada = ordenes.find((o) => o.codigo === text);
+        const encontrada = ordenes.find(
+          (o) => o.codigo === originalText || o.codigo === text
+        );
+
         if (encontrada) {
           const orden = await abrirDetalle(encontrada.id);
           const etapa = getCurrentStage(orden);
@@ -1015,7 +1063,12 @@ export default function ProduccionPage() {
           return;
         }
 
-        alert("El contenido escaneado no es un QR válido del sistema.");
+        console.error("Texto original escaneado:", originalText);
+        console.error("Texto normalizado:", text);
+
+        alert(
+          `El contenido escaneado no es un QR válido del sistema.\n\nOriginal:\n${originalText}\n\nNormalizado:\n${text}`
+        );
         return;
       }
 
