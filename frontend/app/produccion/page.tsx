@@ -1181,11 +1181,11 @@ export default function ProduccionPage() {
     : [];
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-3xl bg-white p-6 shadow-sm">
-        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+    <div className="space-y-4 sm:space-y-6">
+      <section className="rounded-2xl bg-white p-4 shadow-sm sm:rounded-3xl sm:p-6">
+        <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-black text-slate-900">Producción</h1>
+            <h1 className="text-xl font-black text-slate-900 sm:text-2xl">Producción</h1>
             <p className="text-sm text-slate-500">
               Control visual de órdenes, etapas, movimientos y etiquetas del taller
             </p>
@@ -1197,24 +1197,24 @@ export default function ProduccionPage() {
               setScannerStatus("Listo para escanear");
               setScannerInput("");
             }}
-            className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+            className="w-full rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700 sm:w-auto sm:px-4 sm:py-2"
           >
             Escanear etiqueta
           </button>
         </div>
 
-        <div className="mb-4 grid gap-3 md:grid-cols-4">
+        <div className="mb-4 grid gap-3 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Buscar OP, modelo, color o código producto"
-            className="rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-blue-500"
+            className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:border-blue-500"
           />
 
           <select
             value={estadoFiltro}
             onChange={(e) => setEstadoFiltro(e.target.value)}
-            className="rounded-xl border border-slate-300 px-4 py-3 text-sm"
+            className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
           >
             <option value="">Estado general</option>
             <option value="LIBERADA">LIBERADA</option>
@@ -1227,7 +1227,7 @@ export default function ProduccionPage() {
           <select
             value={etapaFiltro}
             onChange={(e) => setEtapaFiltro(e.target.value)}
-            className="rounded-xl border border-slate-300 px-4 py-3 text-sm"
+            className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
           >
             <option value="">Etapa actual</option>
             <option value="CORTADO">CORTADO</option>
@@ -1241,7 +1241,7 @@ export default function ProduccionPage() {
           <select
             value={prioridadFiltro}
             onChange={(e) => setPrioridadFiltro(e.target.value)}
-            className="rounded-xl border border-slate-300 px-4 py-3 text-sm"
+            className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
           >
             <option value="">Prioridad</option>
             <option value="BAJA">BAJA</option>
@@ -1256,7 +1256,7 @@ export default function ProduccionPage() {
           <p className="text-sm text-slate-500">No hay órdenes para esos filtros.</p>
         ) : (
           <>
-            <div className="overflow-x-auto rounded-2xl border border-slate-200">
+            <div className="hidden lg:block overflow-x-auto rounded-2xl border border-slate-200">
               <table className="min-w-full text-sm">
                 <thead className="bg-slate-100 text-left text-slate-700">
                   <tr>
@@ -1331,7 +1331,60 @@ export default function ProduccionPage() {
               </table>
             </div>
 
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+            <div className="grid gap-3 lg:hidden">
+              {ordenesPagina.map((orden) => (
+                <div key={orden.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="text-base font-black text-slate-900">{orden.codigo}</div>
+                      <div className="text-sm font-semibold text-slate-800">{orden.modelo}</div>
+                      <div className="text-xs text-slate-500">
+                        {orden.color} · {orden.material || "-"} · {orden.taco || "-"}
+                      </div>
+                    </div>
+                    <div>{badgeEstado(orden.estadoGeneral)}</div>
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-slate-600">
+                    <div>
+                      <span className="font-semibold">Pares:</span> {orden.cantidadPares}
+                    </div>
+                    <div>
+                      <span className="font-semibold">Prioridad:</span> {orden.prioridad}
+                    </div>
+                    <div>
+                      <span className="font-semibold">Compromiso:</span> {formatDate(orden.fechaCompromiso)}
+                    </div>
+                    <div>
+                      <span className="font-semibold">Etapa:</span> {orden.etapaActual || "-"}
+                    </div>
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                    <button
+                      onClick={() => abrirDetalle(orden.id)}
+                      className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+                    >
+                      Ver detalle
+                    </button>
+                    <button
+                      onClick={() => generarEtiquetaCajaPDF(orden)}
+                      className="w-full rounded-xl border border-blue-300 px-4 py-3 text-sm font-semibold text-blue-700 hover:bg-blue-50"
+                    >
+                      Etiquetas cajas
+                    </button>
+                    <button
+                      onClick={() => generarEtiquetaGeneralOP(orden)}
+                      className="w-full rounded-xl border border-emerald-300 px-4 py-3 text-sm font-semibold text-emerald-700 hover:bg-emerald-50"
+                    >
+                      Etiqueta OP
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
               <div className="flex items-center gap-2 text-sm text-slate-600">
                 <span>Mostrar</span>
                 <select
@@ -1347,23 +1400,23 @@ export default function ProduccionPage() {
                 <span>filas</span>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="grid grid-cols-3 gap-2 sm:flex sm:items-center">
                 <button
                   disabled={paginaActual <= 1}
                   onClick={() => setPaginaActual((p) => Math.max(1, p - 1))}
                   className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold disabled:opacity-50"
                 >
-                  ◀ Anterior
+                  ◀ Ant.
                 </button>
-                <div className="rounded-lg bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-700">
-                  Página {paginaActual} de {totalPaginas}
+                <div className="flex items-center justify-center rounded-lg bg-slate-100 px-3 py-2 text-center text-sm font-semibold text-slate-700">
+                  {paginaActual} / {totalPaginas}
                 </div>
                 <button
                   disabled={paginaActual >= totalPaginas}
                   onClick={() => setPaginaActual((p) => Math.min(totalPaginas, p + 1))}
                   className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-semibold disabled:opacity-50"
                 >
-                  Siguiente ▶
+                  Sig. ▶
                 </button>
               </div>
             </div>
@@ -1372,14 +1425,12 @@ export default function ProduccionPage() {
       </section>
 
       {scanModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-3xl rounded-3xl bg-white p-6 shadow-xl">
-            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div className="fixed inset-0 z-50 bg-black/40 p-0 sm:flex sm:items-center sm:justify-center sm:p-4">
+          <div className="flex h-dvh w-full flex-col bg-white p-4 shadow-xl sm:h-auto sm:max-h-[90vh] sm:max-w-3xl sm:rounded-3xl sm:p-6">
+            <div className="mb-4 flex items-start justify-between gap-3">
               <div>
-                <h2 className="text-xl font-black text-slate-900">Scanner de producción</h2>
-                <p className="text-sm text-slate-500">
-                  Usa cámara del celular o lector externo
-                </p>
+                <h2 className="text-lg font-black text-slate-900 sm:text-xl">Scanner de producción</h2>
+                <p className="text-sm text-slate-500">Usa cámara del celular o lector externo</p>
               </div>
 
               <button
@@ -1393,11 +1444,11 @@ export default function ProduccionPage() {
               </button>
             </div>
 
-            <div className="mb-4 flex flex-wrap gap-2">
+            <div className="mb-3 grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
               <button
                 type="button"
                 onClick={() => setScanExpected("OP_GENERAL")}
-                className={`rounded-xl px-4 py-2 text-sm font-semibold ${
+                className={`rounded-xl px-4 py-3 text-sm font-semibold ${
                   scanExpected === "OP_GENERAL"
                     ? "bg-slate-900 text-white"
                     : "border border-slate-300 text-slate-700"
@@ -1408,7 +1459,7 @@ export default function ProduccionPage() {
               <button
                 type="button"
                 onClick={() => setScanExpected("OP_CAJA")}
-                className={`rounded-xl px-4 py-2 text-sm font-semibold ${
+                className={`rounded-xl px-4 py-3 text-sm font-semibold ${
                   scanExpected === "OP_CAJA"
                     ? "bg-slate-900 text-white"
                     : "border border-slate-300 text-slate-700"
@@ -1418,11 +1469,11 @@ export default function ProduccionPage() {
               </button>
             </div>
 
-            <div className="mb-4 flex flex-wrap gap-2">
+            <div className="mb-3 grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
               <button
                 type="button"
                 onClick={() => setScanMode("CAMARA")}
-                className={`rounded-xl px-4 py-2 text-sm font-semibold ${
+                className={`rounded-xl px-4 py-3 text-sm font-semibold ${
                   scanMode === "CAMARA"
                     ? "bg-blue-600 text-white"
                     : "border border-slate-300 text-slate-700"
@@ -1433,7 +1484,7 @@ export default function ProduccionPage() {
               <button
                 type="button"
                 onClick={() => setScanMode("MANUAL")}
-                className={`rounded-xl px-4 py-2 text-sm font-semibold ${
+                className={`rounded-xl px-4 py-3 text-sm font-semibold ${
                   scanMode === "MANUAL"
                     ? "bg-blue-600 text-white"
                     : "border border-slate-300 text-slate-700"
@@ -1447,322 +1498,328 @@ export default function ProduccionPage() {
               {scannerStatus}
             </div>
 
-            {scanMode === "CAMARA" ? (
-              <div className="space-y-3">
-                <div className="overflow-hidden rounded-2xl border border-slate-200 bg-black">
-                  <video
-                    ref={videoRef}
-                    className="h-[340px] w-full object-cover"
-                    muted
-                    playsInline
-                  />
-                </div>
-
-                {cameraError ? (
-                  <div className="rounded-xl bg-red-50 p-3 text-sm text-red-700">
-                    {cameraError}
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              {scanMode === "CAMARA" ? (
+                <div className="space-y-3">
+                  <div className="overflow-hidden rounded-2xl border border-slate-200 bg-black">
+                    <video
+                      ref={videoRef}
+                      className="h-[50vh] w-full object-cover sm:h-[340px]"
+                      muted
+                      playsInline
+                    />
                   </div>
-                ) : null}
 
-                <div className="rounded-xl bg-blue-50 p-3 text-sm text-blue-700">
-                  Apunta la cámara al QR. Se abrirá la OP automáticamente.
+                  {cameraError ? (
+                    <div className="rounded-xl bg-red-50 p-3 text-sm text-red-700">
+                      {cameraError}
+                    </div>
+                  ) : null}
+
+                  <div className="rounded-xl bg-blue-50 p-3 text-sm text-blue-700">
+                    Apunta la cámara al QR. Se abrirá la OP automáticamente.
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                <textarea
-                  value={scannerInput}
-                  onChange={(e) => setScannerInput(e.target.value)}
-                  placeholder="Pega aquí el contenido del QR o usa tu lector externo..."
-                  className="min-h-[180px] w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm"
-                />
+              ) : (
+                <div className="space-y-3">
+                  <textarea
+                    value={scannerInput}
+                    onChange={(e) => setScannerInput(e.target.value)}
+                    placeholder="Pega aquí el contenido del QR o usa tu lector externo..."
+                    className="min-h-[220px] w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm sm:min-h-[180px]"
+                  />
 
-                <button
-                  onClick={() => procesarTextoEscaneado()}
-                  className="w-full rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700"
-                >
-                  Procesar escaneo manual
-                </button>
-              </div>
-            )}
+                  <button
+                    onClick={() => procesarTextoEscaneado()}
+                    className="w-full rounded-xl bg-blue-600 px-4 py-4 text-sm font-semibold text-white hover:bg-blue-700"
+                  >
+                    Procesar escaneo manual
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
 
       {detalleOpen && ordenActiva && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 p-4">
-          <div className="max-h-[95vh] w-full max-w-7xl overflow-y-auto rounded-3xl bg-white p-6 shadow-xl">
-            <div className="mb-5 flex items-center justify-between gap-3">
-              <div>
-                <h2 className="text-2xl font-black text-slate-900">
-                  Orden {ordenActiva.codigo}
-                </h2>
-                <p className="text-sm text-slate-500">
-                  {ordenActiva.modelo} · {ordenActiva.color} · {ordenActiva.material || "-"} ·{" "}
-                  {ordenActiva.taco || "-"}
-                </p>
-              </div>
+        <div className="fixed inset-0 z-50 bg-black/40 p-0 sm:flex sm:items-start sm:justify-center sm:p-4">
+          <div className="flex h-dvh w-full flex-col bg-white shadow-xl sm:h-auto sm:max-h-[95vh] sm:max-w-7xl sm:overflow-y-auto sm:rounded-3xl sm:p-6">
+            <div className="sticky top-0 z-10 border-b border-slate-200 bg-white p-4 sm:static sm:border-0 sm:bg-transparent sm:p-0 sm:pb-5">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h2 className="text-xl font-black text-slate-900 sm:text-2xl">
+                    Orden {ordenActiva.codigo}
+                  </h2>
+                  <p className="text-sm text-slate-500">
+                    {ordenActiva.modelo} · {ordenActiva.color} · {ordenActiva.material || "-"} ·{" "}
+                    {ordenActiva.taco || "-"}
+                  </p>
+                </div>
 
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => generarEtiquetaCajaPDF(ordenActiva)}
-                  className="rounded-xl border border-blue-300 px-4 py-2 text-sm font-semibold text-blue-700 hover:bg-blue-50"
-                >
-                  Etiquetas cajas
-                </button>
-                <button
-                  onClick={() => generarEtiquetaGeneralOP(ordenActiva)}
-                  className="rounded-xl border border-emerald-300 px-4 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-50"
-                >
-                  Etiqueta OP
-                </button>
-                <button
-                  onClick={() => setDetalleOpen(false)}
-                  className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
-                >
-                  Cerrar
-                </button>
+                <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
+                  <button
+                    onClick={() => generarEtiquetaCajaPDF(ordenActiva)}
+                    className="rounded-xl border border-blue-300 px-4 py-3 text-sm font-semibold text-blue-700 hover:bg-blue-50 sm:py-2"
+                  >
+                    Etiquetas cajas
+                  </button>
+                  <button
+                    onClick={() => generarEtiquetaGeneralOP(ordenActiva)}
+                    className="rounded-xl border border-emerald-300 px-4 py-3 text-sm font-semibold text-emerald-700 hover:bg-emerald-50 sm:py-2"
+                  >
+                    Etiqueta OP
+                  </button>
+                  <button
+                    onClick={() => setDetalleOpen(false)}
+                    className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-100 sm:py-2"
+                  >
+                    Cerrar
+                  </button>
+                </div>
               </div>
             </div>
 
-            <div className="grid gap-6 lg:grid-cols-3">
-              <div className="space-y-4 lg:col-span-2">
-                <section className="rounded-2xl border border-slate-200 p-4">
-                  <h3 className="mb-3 text-lg font-black text-slate-900">Resumen</h3>
-                  <div className="grid gap-3 text-sm text-slate-700 md:grid-cols-2">
-                    <div><b>Código:</b> {ordenActiva.codigo}</div>
-                    <div><b>Producto base:</b> {ordenActiva.productoBase.codigo}</div>
-                    <div><b>Código barras:</b> {ordenActiva.productoBase.codigoBarras || "-"}</div>
-                    <div><b>Modelo:</b> {ordenActiva.modelo}</div>
-                    <div><b>Color:</b> {ordenActiva.color}</div>
-                    <div><b>Material:</b> {ordenActiva.material || "-"}</div>
-                    <div><b>Taco:</b> {ordenActiva.taco || "-"}</div>
-                    <div><b>Colección:</b> {ordenActiva.coleccion || "-"}</div>
-                    <div><b>Almacén destino:</b> {ordenActiva.almacenDestino.codigo}</div>
-                    <div><b>Cantidad pares:</b> {ordenActiva.cantidadPares}</div>
-                    <div><b>Prioridad:</b> {ordenActiva.prioridad}</div>
-                    <div><b>Estado:</b> {ordenActiva.estadoGeneral}</div>
-                    <div><b>Etapa actual:</b> {ordenActiva.etapaActual || "-"}</div>
-                    <div><b>Fecha compromiso:</b> {formatDate(ordenActiva.fechaCompromiso)}</div>
-                    <div><b>Entrega real:</b> {formatDate(ordenActiva.fechaEntregaReal)}</div>
-                    <div className="md:col-span-2"><b>Observaciones:</b> {ordenActiva.observaciones || "-"}</div>
-                  </div>
-                </section>
+            <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-0">
+              <div className="grid gap-4 sm:gap-6 lg:grid-cols-3">
+                <div className="space-y-4 lg:col-span-2">
+                  <section className="rounded-2xl border border-slate-200 p-4">
+                    <h3 className="mb-3 text-lg font-black text-slate-900">Resumen</h3>
+                    <div className="grid gap-3 text-sm text-slate-700 sm:grid-cols-2">
+                      <div><b>Código:</b> {ordenActiva.codigo}</div>
+                      <div><b>Producto base:</b> {ordenActiva.productoBase.codigo}</div>
+                      <div><b>Código barras:</b> {ordenActiva.productoBase.codigoBarras || "-"}</div>
+                      <div><b>Modelo:</b> {ordenActiva.modelo}</div>
+                      <div><b>Color:</b> {ordenActiva.color}</div>
+                      <div><b>Material:</b> {ordenActiva.material || "-"}</div>
+                      <div><b>Taco:</b> {ordenActiva.taco || "-"}</div>
+                      <div><b>Colección:</b> {ordenActiva.coleccion || "-"}</div>
+                      <div><b>Almacén destino:</b> {ordenActiva.almacenDestino.codigo}</div>
+                      <div><b>Cantidad pares:</b> {ordenActiva.cantidadPares}</div>
+                      <div><b>Prioridad:</b> {ordenActiva.prioridad}</div>
+                      <div><b>Estado:</b> {ordenActiva.estadoGeneral}</div>
+                      <div><b>Etapa actual:</b> {ordenActiva.etapaActual || "-"}</div>
+                      <div><b>Fecha compromiso:</b> {formatDate(ordenActiva.fechaCompromiso)}</div>
+                      <div><b>Entrega real:</b> {formatDate(ordenActiva.fechaEntregaReal)}</div>
+                      <div className="sm:col-span-2"><b>Observaciones:</b> {ordenActiva.observaciones || "-"}</div>
+                    </div>
+                  </section>
 
-                <section className="rounded-2xl border border-slate-200 p-4">
-                  <h3 className="mb-3 text-lg font-black text-slate-900">Corrida</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {Object.entries(ordenActiva.corridaJson || {}).map(([talla, cantidad]) => (
-                      <div
-                        key={talla}
-                        className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700"
-                      >
-                        <b>Talla {talla}</b>: {cantidad}
-                      </div>
-                    ))}
-                  </div>
-                </section>
-
-                <section className="rounded-2xl border border-slate-200 p-4">
-                  <h3 className="mb-3 text-lg font-black text-slate-900">Etapas</h3>
-
-                  <div className="space-y-3">
-                    {etapasOrdenadas.map((etapa) => (
-                      <button
-                        key={etapa.id}
-                        onClick={() => prepararEtapa(etapa)}
-                        className={`block w-full rounded-2xl border p-4 text-left ${
-                          etapaSeleccionada?.id === etapa.id
-                            ? "border-blue-400 bg-blue-50"
-                            : "border-slate-200 hover:bg-slate-50"
-                        }`}
-                      >
-                        <div className="flex flex-wrap items-center justify-between gap-3">
-                          <div>
-                            <div className="font-bold text-slate-900">
-                              {etapa.ordenEtapa}. {etapa.etapa}
-                            </div>
-                            <div className="mt-1 text-xs text-slate-500">
-                              Responsable: {etapa.responsableNombre || "-"} · Inicio:{" "}
-                              {formatDateTime(etapa.fechaInicio)} · Fin:{" "}
-                              {formatDateTime(etapa.fechaFin)}
-                            </div>
-                          </div>
-                          <div>{badgeEtapa(etapa.estadoEtapa)}</div>
-                        </div>
-
-                        <div className="mt-2 grid gap-2 text-xs text-slate-600 md:grid-cols-4">
-                          <div>Recibida: <b>{etapa.cantidadRecibida}</b></div>
-                          <div>Procesada: <b>{etapa.cantidadProcesada}</b></div>
-                          <div>Observada: <b>{etapa.cantidadObservada}</b></div>
-                          <div>MO: <b>{formatMoney(etapa.costoManoObra)}</b></div>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </section>
-
-                <section className="rounded-2xl border border-slate-200 p-4">
-                  <h3 className="mb-3 text-lg font-black text-slate-900">Movimientos</h3>
-
-                  {ordenActiva.movimientos.length === 0 ? (
-                    <p className="text-sm text-slate-500">No hay movimientos aún.</p>
-                  ) : (
-                    <div className="space-y-3">
-                      {ordenActiva.movimientos.map((mov) => (
-                        <div key={mov.id} className="rounded-xl border border-slate-200 p-3 text-sm">
-                          <div className="font-bold text-slate-900">
-                            {mov.etapaOrigen || "-"} → {mov.etapaDestino || "-"}
-                          </div>
-                          <div className="text-slate-600">Cantidad: {mov.cantidad}</div>
-                          <div className="text-slate-600">
-                            Sale: {mov.responsableSale || "-"} · Entra: {mov.responsableEntra || "-"}
-                          </div>
-                          <div className="text-xs text-slate-500">
-                            {formatDateTime(mov.createdAt)} · {mov.usuarioEmail || "-"}
-                          </div>
-                          <div className="text-xs text-slate-500">{mov.observaciones || "-"}</div>
+                  <section className="rounded-2xl border border-slate-200 p-4">
+                    <h3 className="mb-3 text-lg font-black text-slate-900">Corrida</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {Object.entries(ordenActiva.corridaJson || {}).map(([talla, cantidad]) => (
+                        <div
+                          key={talla}
+                          className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700"
+                        >
+                          <b>Talla {talla}</b>: {cantidad}
                         </div>
                       ))}
                     </div>
-                  )}
-                </section>
-              </div>
-
-              <div className="space-y-4">
-                {lastScannedCaja ? (
-                  <section className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
-                    <h3 className="mb-2 text-lg font-black text-slate-900">Caja escaneada</h3>
-                    <div className="space-y-1 text-sm text-slate-700">
-                      <div><b>OP:</b> {lastScannedCaja.opCodigo}</div>
-                    </div>
-
-                    <button
-                      onClick={moverUnaCajaRapido}
-                      disabled={procesando || !etapaSeleccionada}
-                      className="mt-4 w-full rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
-                    >
-                      Mover 1 caja
-                    </button>
                   </section>
-                ) : null}
 
-                {etapaSeleccionada ? (
-                  <>
-                    <section className="rounded-2xl border border-slate-200 p-4">
-                      <h3 className="mb-3 text-lg font-black text-slate-900">
-                        Iniciar etapa: {etapaSeleccionada.etapa}
-                      </h3>
-
-                      <div className="space-y-3">
-                        <input
-                          value={responsableNombre}
-                          onChange={(e) => setResponsableNombre(e.target.value)}
-                          placeholder="Responsable"
-                          className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
-                        />
-
-                        <input
-                          type="date"
-                          value={fechaCompromisoEtapa}
-                          onChange={(e) => setFechaCompromisoEtapa(e.target.value)}
-                          className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
-                        />
-
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={costoManoObra}
-                          onChange={(e) => setCostoManoObra(e.target.value)}
-                          placeholder="Costo mano de obra"
-                          className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
-                        />
-
-                        <textarea
-                          value={observacionesEtapa}
-                          onChange={(e) => setObservacionesEtapa(e.target.value)}
-                          placeholder="Observaciones de inicio"
-                          className="min-h-[90px] w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
-                        />
-
-                        <button
-                          onClick={iniciarEtapa}
-                          disabled={procesando}
-                          className="w-full rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
-                        >
-                          Iniciar etapa
-                        </button>
-                      </div>
-                    </section>
-
-                    <section className="rounded-2xl border border-slate-200 p-4">
-                      <h3 className="mb-3 text-lg font-black text-slate-900">
-                        Finalizar etapa: {etapaSeleccionada.etapa}
-                      </h3>
-
-                      <div className="space-y-3">
-                        <input
-                          type="number"
-                          min={0}
-                          value={cantidadProcesada}
-                          onChange={(e) => setCantidadProcesada(e.target.value)}
-                          placeholder="Cantidad procesada"
-                          className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
-                        />
-
-                        <input
-                          type="number"
-                          min={0}
-                          value={cantidadObservada}
-                          onChange={(e) => setCantidadObservada(e.target.value)}
-                          placeholder="Cantidad observada"
-                          className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
-                        />
-
-                        <textarea
-                          value={observacionesFinalizar}
-                          onChange={(e) => setObservacionesFinalizar(e.target.value)}
-                          placeholder="Observaciones de cierre"
-                          className="min-h-[90px] w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
-                        />
-
-                        <button
-                          onClick={finalizarEtapa}
-                          disabled={procesando}
-                          className="w-full rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
-                        >
-                          Finalizar etapa
-                        </button>
-                      </div>
-                    </section>
-                  </>
-                ) : (
                   <section className="rounded-2xl border border-slate-200 p-4">
-                    <h3 className="mb-2 text-lg font-black text-slate-900">Acciones</h3>
-                    <p className="text-sm text-slate-500">
-                      Selecciona una etapa para iniciar o finalizar el trabajo.
-                    </p>
+                    <h3 className="mb-3 text-lg font-black text-slate-900">Etapas</h3>
+
+                    <div className="space-y-3">
+                      {etapasOrdenadas.map((etapa) => (
+                        <button
+                          key={etapa.id}
+                          onClick={() => prepararEtapa(etapa)}
+                          className={`block w-full rounded-2xl border p-4 text-left ${
+                            etapaSeleccionada?.id === etapa.id
+                              ? "border-blue-400 bg-blue-50"
+                              : "border-slate-200 hover:bg-slate-50"
+                          }`}
+                        >
+                          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+                            <div>
+                              <div className="font-bold text-slate-900">
+                                {etapa.ordenEtapa}. {etapa.etapa}
+                              </div>
+                              <div className="mt-1 text-xs text-slate-500">
+                                Responsable: {etapa.responsableNombre || "-"} · Inicio:{" "}
+                                {formatDateTime(etapa.fechaInicio)} · Fin:{" "}
+                                {formatDateTime(etapa.fechaFin)}
+                              </div>
+                            </div>
+                            <div>{badgeEtapa(etapa.estadoEtapa)}</div>
+                          </div>
+
+                          <div className="mt-2 grid gap-2 text-xs text-slate-600 grid-cols-2 sm:grid-cols-4">
+                            <div>Recibida: <b>{etapa.cantidadRecibida}</b></div>
+                            <div>Procesada: <b>{etapa.cantidadProcesada}</b></div>
+                            <div>Observada: <b>{etapa.cantidadObservada}</b></div>
+                            <div>MO: <b>{formatMoney(etapa.costoManoObra)}</b></div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
                   </section>
-                )}
 
-                <section className="rounded-2xl border border-slate-200 p-4">
-                  <h3 className="mb-3 text-lg font-black text-slate-900">Etiquetas</h3>
+                  <section className="rounded-2xl border border-slate-200 p-4">
+                    <h3 className="mb-3 text-lg font-black text-slate-900">Movimientos</h3>
 
-                  <div className="space-y-2">
-                    <button
-                      onClick={() => generarEtiquetaCajaPDF(ordenActiva)}
-                      className="w-full rounded-xl border border-blue-300 px-4 py-3 text-sm font-semibold text-blue-700 hover:bg-blue-50"
-                    >
-                      Generar etiquetas por caja
-                    </button>
-                    <button
-                      onClick={() => generarEtiquetaGeneralOP(ordenActiva)}
-                      className="w-full rounded-xl border border-emerald-300 px-4 py-3 text-sm font-semibold text-emerald-700 hover:bg-emerald-50"
-                    >
-                      Generar etiqueta general OP
-                    </button>
-                  </div>
-                </section>
+                    {ordenActiva.movimientos.length === 0 ? (
+                      <p className="text-sm text-slate-500">No hay movimientos aún.</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {ordenActiva.movimientos.map((mov) => (
+                          <div key={mov.id} className="rounded-xl border border-slate-200 p-3 text-sm">
+                            <div className="font-bold text-slate-900">
+                              {mov.etapaOrigen || "-"} → {mov.etapaDestino || "-"}
+                            </div>
+                            <div className="text-slate-600">Cantidad: {mov.cantidad}</div>
+                            <div className="text-slate-600">
+                              Sale: {mov.responsableSale || "-"} · Entra: {mov.responsableEntra || "-"}
+                            </div>
+                            <div className="text-xs text-slate-500">
+                              {formatDateTime(mov.createdAt)} · {mov.usuarioEmail || "-"}
+                            </div>
+                            <div className="text-xs text-slate-500 break-words">{mov.observaciones || "-"}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </section>
+                </div>
+
+                <div className="space-y-4">
+                  {lastScannedCaja ? (
+                    <section className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
+                      <h3 className="mb-2 text-lg font-black text-slate-900">Caja escaneada</h3>
+                      <div className="space-y-1 text-sm text-slate-700">
+                        <div><b>OP:</b> {lastScannedCaja.opCodigo}</div>
+                      </div>
+
+                      <button
+                        onClick={moverUnaCajaRapido}
+                        disabled={procesando || !etapaSeleccionada}
+                        className="mt-4 w-full rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
+                      >
+                        Mover 1 caja
+                      </button>
+                    </section>
+                  ) : null}
+
+                  {etapaSeleccionada ? (
+                    <>
+                      <section className="rounded-2xl border border-slate-200 p-4">
+                        <h3 className="mb-3 text-lg font-black text-slate-900">
+                          Iniciar etapa: {etapaSeleccionada.etapa}
+                        </h3>
+
+                        <div className="space-y-3">
+                          <input
+                            value={responsableNombre}
+                            onChange={(e) => setResponsableNombre(e.target.value)}
+                            placeholder="Responsable"
+                            className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
+                          />
+
+                          <input
+                            type="date"
+                            value={fechaCompromisoEtapa}
+                            onChange={(e) => setFechaCompromisoEtapa(e.target.value)}
+                            className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
+                          />
+
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={costoManoObra}
+                            onChange={(e) => setCostoManoObra(e.target.value)}
+                            placeholder="Costo mano de obra"
+                            className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
+                          />
+
+                          <textarea
+                            value={observacionesEtapa}
+                            onChange={(e) => setObservacionesEtapa(e.target.value)}
+                            placeholder="Observaciones de inicio"
+                            className="min-h-[90px] w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
+                          />
+
+                          <button
+                            onClick={iniciarEtapa}
+                            disabled={procesando}
+                            className="w-full rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
+                          >
+                            Iniciar etapa
+                          </button>
+                        </div>
+                      </section>
+
+                      <section className="rounded-2xl border border-slate-200 p-4">
+                        <h3 className="mb-3 text-lg font-black text-slate-900">
+                          Finalizar etapa: {etapaSeleccionada.etapa}
+                        </h3>
+
+                        <div className="space-y-3">
+                          <input
+                            type="number"
+                            min={0}
+                            value={cantidadProcesada}
+                            onChange={(e) => setCantidadProcesada(e.target.value)}
+                            placeholder="Cantidad procesada"
+                            className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
+                          />
+
+                          <input
+                            type="number"
+                            min={0}
+                            value={cantidadObservada}
+                            onChange={(e) => setCantidadObservada(e.target.value)}
+                            placeholder="Cantidad observada"
+                            className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
+                          />
+
+                          <textarea
+                            value={observacionesFinalizar}
+                            onChange={(e) => setObservacionesFinalizar(e.target.value)}
+                            placeholder="Observaciones de cierre"
+                            className="min-h-[90px] w-full rounded-xl border border-slate-300 px-4 py-3 text-sm"
+                          />
+
+                          <button
+                            onClick={finalizarEtapa}
+                            disabled={procesando}
+                            className="w-full rounded-xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+                          >
+                            Finalizar etapa
+                          </button>
+                        </div>
+                      </section>
+                    </>
+                  ) : (
+                    <section className="rounded-2xl border border-slate-200 p-4">
+                      <h3 className="mb-2 text-lg font-black text-slate-900">Acciones</h3>
+                      <p className="text-sm text-slate-500">
+                        Selecciona una etapa para iniciar o finalizar el trabajo.
+                      </p>
+                    </section>
+                  )}
+
+                  <section className="rounded-2xl border border-slate-200 p-4">
+                    <h3 className="mb-3 text-lg font-black text-slate-900">Etiquetas</h3>
+
+                    <div className="space-y-2">
+                      <button
+                        onClick={() => generarEtiquetaCajaPDF(ordenActiva)}
+                        className="w-full rounded-xl border border-blue-300 px-4 py-3 text-sm font-semibold text-blue-700 hover:bg-blue-50"
+                      >
+                        Generar etiquetas por caja
+                      </button>
+                      <button
+                        onClick={() => generarEtiquetaGeneralOP(ordenActiva)}
+                        className="w-full rounded-xl border border-emerald-300 px-4 py-3 text-sm font-semibold text-emerald-700 hover:bg-emerald-50"
+                      >
+                        Generar etiqueta general OP
+                      </button>
+                    </div>
+                  </section>
+                </div>
               </div>
             </div>
           </div>
