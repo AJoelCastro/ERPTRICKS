@@ -23,6 +23,7 @@ import {
   LogOut,
   UserCog,
   Warehouse,
+  BadgeDollarSign,
 } from "lucide-react";
 import "./globals.css";
 import { AuthProvider, useAuth } from "./components/auth/AuthProvider";
@@ -52,10 +53,10 @@ const menuItems: MenuItem[] = [
   { label: "Caja / Tesorería", href: "/caja", icon: Wallet, permissions: ["caja.ver"] },
   { label: "Proveedores", href: "/proveedores", icon: Truck, permissions: ["proveedores.ver"] },
   { label: "Compras", href: "/compras", icon: Boxes, permissions: ["compras.ver"] },
+  { label: "Pagos Yape", href: "/pagos-yape", icon: BadgeDollarSign, permissions: ["caja.ver"] },
   { label: "Usuarios", href: "/usuarios", icon: UserCog, permissions: ["usuarios.ver"] },
   { label: "Roles", href: "/roles", icon: ShieldCheck, permissions: ["usuarios.roles"] },
   { label: "Permisos", href: "/permisos", icon: KeyRound, permissions: ["usuarios.permisos", "usuarios.roles"] },
-  
 ];
 
 function CompanyLogo({
