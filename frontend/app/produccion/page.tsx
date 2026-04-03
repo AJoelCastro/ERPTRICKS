@@ -108,18 +108,9 @@ type ScanPayloadGeneral = {
 };
 
 type ScanPayloadCaja = {
-  type: "OP_PAR";
-  opId: string;
+  type: "OP_CAJA";
   opCodigo: string;
-  productoId: string;
-  productoCodigo: string;
-  modelo: string;
-  color: string;
-  material?: string | null;
-  taco?: string | null;
-  talla: string;
-  boxIndex: number;
-  boxTotal: number;
+  sku: string;
 };
 
 type ScanPayload = ScanPayloadGeneral | ScanPayloadCaja;
@@ -329,7 +320,7 @@ export default function ProduccionPage() {
 
   const [scanModalOpen, setScanModalOpen] = useState(false);
   const [scanMode, setScanMode] = useState<"CAMARA" | "MANUAL">("CAMARA");
-  const [scanExpected, setScanExpected] = useState<"OP_GENERAL" | "OP_PAR">("OP_GENERAL");
+  const [scanExpected, setScanExpected] = useState<"OP_GENERAL" | "OP_CAJA">("OP_GENERAL");
   const [scannerInput, setScannerInput] = useState("");
   const [scannerStatus, setScannerStatus] = useState("Listo para escanear");
   const [cameraError, setCameraError] = useState("");
@@ -655,7 +646,7 @@ export default function ProduccionPage() {
           body: JSON.stringify({
             cantidadProcesada: 1,
             cantidadObservada: 0,
-            observaciones: `Movimiento rápido por escaneo · caja ${lastScannedCaja.boxIndex}/${lastScannedCaja.boxTotal} · talla ${lastScannedCaja.talla}`,
+            observaciones: `Movimiento rápido por escaneo · SKU ${lastScannedCaja.sku}`,
             usuarioEmail: "admin@erp.com",
           }),
         }
@@ -681,188 +672,172 @@ export default function ProduccionPage() {
     }
   }
 
-async function generarEtiquetaCajaPDF(orden: OrdenProduccion) {
-  try {
-    const width = mmToPt(100);
-    const height = mmToPt(50);
-
-    const margin = 10;
-    const frameX = margin;
-    const frameY = margin;
-    const frameW = width - margin * 2;
-    const frameH = height - margin * 2;
-
-    // Columna derecha: logo arriba, QR al centro, talla abajo
-    const rightColX = width - margin - 72;
-    const rightColW = 62;
-
-    const logoX = rightColX;
-    const logoY = 12;
-    const logoW = rightColW;
-    const logoH = 12;
-
-    const qrSize = 42;
-    const qrX = rightColX + (rightColW - qrSize) / 2;
-    const qrY = 26;
-
-    const tallaCenterX = rightColX + rightColW / 2;
-    const tallaLabelY = qrY + qrSize + 10;
-    const tallaValueY = qrY + qrSize + 25;
-
-    // Área izquierda
-    const leftX = 18;
-    const leftW = rightColX - leftX - 12;
-
-    const modeloY = 28;
-    const lineY = 34;
-    const colorY = 45;
-    const materialY = 56;
-    const tacoY = 67;
-    const coleccionY = 78;
-
-    const skuY = 96;
-    const prodY = 105;
-    const opY = 114;
-
-    const entries = Object.entries(orden.corridaJson || {})
-      .map(([talla, cantidad]) => ({
-        talla,
-        cantidad: Number(cantidad || 0),
-      }))
-      .filter((x) => x.cantidad > 0);
-
-    const etiquetas: Array<{
-      talla: string;
-      index: number;
-      total: number;
-    }> = [];
-
-    for (const item of entries) {
-      for (let i = 1; i <= item.cantidad; i++) {
-        etiquetas.push({
-          talla: item.talla,
-          index: i,
-          total: item.cantidad,
-        });
-      }
-    }
-
-    const doc = new jsPDF({
-      orientation: "landscape",
-      unit: "pt",
-      format: [width, height],
-    });
-
-    let logoSvgText = "";
+  async function generarEtiquetaCajaPDF(orden: OrdenProduccion) {
     try {
-      logoSvgText = await loadSvgText(COMPANY_LOGO_PATH);
-    } catch (e) {
-      console.warn("No se pudo cargar el logo SVG:", e);
-    }
+      const width = mmToPt(100);
+      const height = mmToPt(50);
 
-    for (let i = 0; i < etiquetas.length; i++) {
-      if (i > 0) doc.addPage([width, height], "landscape");
+      const margin = 10;
+      const frameX = margin;
+      const frameY = margin;
+      const frameW = width - margin * 2;
+      const frameH = height - margin * 2;
 
-      const item = etiquetas[i];
+      const tallaBoxX = 16;
+      const tallaBoxW = 56;
 
-      const payload: ScanPayloadCaja = {
-        type: "OP_PAR",
-        opId: orden.id,
-        opCodigo: orden.codigo,
-        productoId: orden.productoBaseId,
-        productoCodigo: orden.productoBase.codigo,
-        modelo: orden.modelo,
-        color: orden.color,
-        material: orden.material,
-        taco: orden.taco,
-        talla: item.talla,
-        boxIndex: item.index,
-        boxTotal: item.total,
-      };
+      const rightColW = 86;
+      const rightColX = width - margin - rightColW;
 
-      const qrUrl = await QRCode.toDataURL(JSON.stringify(payload), {
-        margin: 1,
-        width: 220,
-      });
+      const logoX = rightColX + 8;
+      const logoY = 12;
+      const logoW = rightColW - 16;
+      const logoH = 12;
 
-      drawPremiumFrame(doc, frameX, frameY, frameW, frameH);
+      const qrSize = 58;
+      const qrX = rightColX + (rightColW - qrSize) / 2;
+      const qrY = 28;
 
-      // Logo arriba del QR
-      if (logoSvgText) {
-        await drawSvgLogo(doc, logoSvgText, logoX, logoY, logoW, logoH);
+      const leftX = tallaBoxX + tallaBoxW + 8;
+      const leftW = rightColX - leftX - 8;
+
+      const modeloY = 26;
+      const lineY = 32;
+      const colorY = 42;
+      const materialY = 52;
+      const tacoY = 62;
+      const coleccionY = 72;
+
+      const skuY = 88;
+      const prodY = 98;
+      const opY = 108;
+
+      const entries = Object.entries(orden.corridaJson || {})
+        .map(([talla, cantidad]) => ({
+          talla,
+          cantidad: Number(cantidad || 0),
+        }))
+        .filter((x) => x.cantidad > 0);
+
+      const etiquetas: Array<{
+        talla: string;
+        index: number;
+        total: number;
+      }> = [];
+
+      for (const item of entries) {
+        for (let i = 1; i <= item.cantidad; i++) {
+          etiquetas.push({
+            talla: item.talla,
+            index: i,
+            total: item.cantidad,
+          });
+        }
       }
 
-      // Modelo
-      const modeloTexto = safeUpper(orden.modelo);
-      const modeloFont = fitText(doc, modeloTexto, leftW, 14, 9, "bold");
-
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(modeloFont);
-      doc.setTextColor(0, 0, 0);
-      doc.text(truncateText(doc, modeloTexto, leftW), leftX, modeloY);
-
-      // Línea divisoria
-      doc.setDrawColor(0, 0, 0);
-      doc.setLineWidth(0.4);
-      doc.line(leftX, lineY, rightColX - 6, lineY);
-
-      // Datos izquierdos
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(6.5);
-      doc.setTextColor(0, 0, 0);
-      doc.text("Color", leftX, colorY);
-      doc.text("Material", leftX, materialY);
-      doc.text("Taco", leftX, tacoY);
-      doc.text("Colección", leftX, coleccionY);
-
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(6.5);
-      doc.setTextColor(0, 0, 0);
-      doc.text(truncateText(doc, safeUpper(orden.color), leftW - 40), leftX + 40, colorY);
-      doc.text(truncateText(doc, safeUpper(orden.material), leftW - 40), leftX + 40, materialY);
-      doc.text(truncateText(doc, safeUpper(orden.taco), leftW - 40), leftX + 40, tacoY);
-      doc.text(
-        truncateText(doc, safeUpper(orden.coleccion), leftW - 40),
-        leftX + 40,
-        coleccionY
-      );
-
-      // QR al centro de la columna derecha
-      doc.addImage(qrUrl, "PNG", qrX, qrY, qrSize, qrSize);
-
-      // Talla debajo del QR
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(6.5);
-      doc.setTextColor(0, 0, 0);
-      doc.text("TALLA", tallaCenterX, tallaLabelY, { align: "center" });
-
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(18);
-      doc.setTextColor(0, 0, 0);
-      doc.text(String(item.talla), tallaCenterX, tallaValueY, {
-        align: "center",
+      const doc = new jsPDF({
+        orientation: "landscape",
+        unit: "pt",
+        format: [width, height],
       });
 
-      // Texto inferior izquierdo
-      const skuVisual = `${safeUpper(orden.modelo)}-${safeUpper(orden.color)}-${safeUpper(
-        orden.material
-      )}-${safeUpper(orden.taco)}-${item.talla}`;
+      let logoSvgText = "";
+      try {
+        logoSvgText = await loadSvgText(COMPANY_LOGO_PATH);
+      } catch (e) {
+        console.warn("No se pudo cargar el logo SVG:", e);
+      }
 
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(5.7);
-      doc.setTextColor(0, 0, 0);
-      doc.text(truncateText(doc, skuVisual, frameW - 24), leftX, skuY);
+      for (let i = 0; i < etiquetas.length; i++) {
+        if (i > 0) doc.addPage([width, height], "landscape");
 
-      doc.text(`PROD ${safeUpper(orden.productoBase.codigo)}`, leftX, prodY);
-      doc.text(orden.codigo, leftX, opY);
+        const item = etiquetas[i];
+
+        const skuVisual = `${safeUpper(orden.productoBase.codigo)}-${String(item.talla)}`;
+
+        const payload: ScanPayloadCaja = {
+          type: "OP_CAJA",
+          opCodigo: orden.codigo,
+          sku: skuVisual,
+        };
+
+        const qrUrl = await QRCode.toDataURL(JSON.stringify(payload), {
+          margin: 1,
+          width: 320,
+        });
+
+        drawPremiumFrame(doc, frameX, frameY, frameW, frameH);
+
+        if (logoSvgText) {
+          await drawSvgLogo(doc, logoSvgText, logoX, logoY, logoW, logoH);
+        }
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8);
+        doc.setTextColor(0, 0, 0);
+        doc.text("TALLA", tallaBoxX + tallaBoxW / 2, 28, { align: "center" });
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(30);
+        doc.setTextColor(0, 0, 0);
+        doc.text(String(item.talla), tallaBoxX + tallaBoxW / 2, 58, {
+          align: "center",
+        });
+
+        const modeloTexto = safeUpper(orden.modelo);
+        const modeloFont = fitText(doc, modeloTexto, leftW, 13, 8, "bold");
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(modeloFont);
+        doc.setTextColor(0, 0, 0);
+        doc.text(truncateText(doc, modeloTexto, leftW), leftX, modeloY);
+
+        doc.setDrawColor(0, 0, 0);
+        doc.setLineWidth(0.4);
+        doc.line(leftX, lineY, rightColX - 6, lineY);
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(6.3);
+        doc.setTextColor(0, 0, 0);
+        doc.text("Color", leftX, colorY);
+        doc.text("Material", leftX, materialY);
+        doc.text("Taco", leftX, tacoY);
+        doc.text("Colección", leftX, coleccionY);
+
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(6.3);
+        doc.setTextColor(0, 0, 0);
+        doc.text(truncateText(doc, safeUpper(orden.color), leftW - 42), leftX + 42, colorY);
+        doc.text(
+          truncateText(doc, safeUpper(orden.material), leftW - 42),
+          leftX + 42,
+          materialY
+        );
+        doc.text(truncateText(doc, safeUpper(orden.taco), leftW - 42), leftX + 42, tacoY);
+        doc.text(
+          truncateText(doc, safeUpper(orden.coleccion), leftW - 42),
+          leftX + 42,
+          coleccionY
+        );
+
+        doc.addImage(qrUrl, "PNG", qrX, qrY, qrSize, qrSize);
+
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(5.7);
+        doc.setTextColor(0, 0, 0);
+        doc.text(truncateText(doc, skuVisual, frameW - 24), leftX, skuY);
+
+        doc.text(`PROD ${safeUpper(orden.productoBase.codigo)}`, leftX, prodY);
+        doc.text(orden.codigo, leftX, opY);
+      }
+
+      doc.save(`${orden.codigo}-etiquetas-caja.pdf`);
+    } catch (error) {
+      console.error(error);
+      alert("No se pudieron generar las etiquetas por caja");
     }
-
-    doc.save(`${orden.codigo}-etiquetas-caja.pdf`);
-  } catch (error) {
-    console.error(error);
-    alert("No se pudieron generar las etiquetas por caja");
   }
-}
+
   async function generarEtiquetaGeneralOP(orden: OrdenProduccion) {
     try {
       const width = mmToPt(100);
@@ -1044,7 +1019,7 @@ async function generarEtiquetaCajaPDF(orden: OrdenProduccion) {
         return;
       }
 
-      if (!payload || !payload.opId) {
+      if (!payload) {
         alert("QR inválido");
         return;
       }
@@ -1054,34 +1029,46 @@ async function generarEtiquetaCajaPDF(orden: OrdenProduccion) {
         return;
       }
 
-      if (scanExpected === "OP_PAR" && payload.type !== "OP_PAR") {
+      if (scanExpected === "OP_CAJA" && payload.type !== "OP_CAJA") {
         alert("Este lector está esperando una etiqueta de caja.");
         return;
       }
 
-      const orden = await abrirDetalle(payload.opId);
-      if (!orden) return;
-
-      const etapaActual = getCurrentStage(orden);
-      prepararEtapa(etapaActual);
-
       if (payload.type === "OP_GENERAL") {
+        const orden = await abrirDetalle(payload.opId);
+        if (!orden) return;
+
+        const etapaActual = getCurrentStage(orden);
+        prepararEtapa(etapaActual);
+
         setScannerStatus(`OP abierta correctamente: ${payload.opCodigo}`);
         setScanModalOpen(false);
         setLastScannedCaja(null);
         return;
       }
 
-      setCantidadProcesada("1");
-      setCantidadObservada("0");
-      setObservacionesFinalizar(
-        `Movimiento rápido por escaneo · caja ${payload.boxIndex}/${payload.boxTotal} · talla ${payload.talla}`
-      );
-      setScannerStatus(
-        `Caja detectada: ${payload.modelo} talla ${payload.talla} (${payload.boxIndex}/${payload.boxTotal})`
-      );
-      setLastScannedCaja(payload);
-      setScanModalOpen(false);
+      if (payload.type === "OP_CAJA") {
+        const encontrada = ordenes.find((o) => o.codigo === payload.opCodigo);
+
+        if (!encontrada) {
+          alert(`No se encontró la OP ${payload.opCodigo}`);
+          return;
+        }
+
+        const orden = await abrirDetalle(encontrada.id);
+        if (!orden) return;
+
+        const etapaActual = getCurrentStage(orden);
+        prepararEtapa(etapaActual);
+
+        setCantidadProcesada("1");
+        setCantidadObservada("0");
+        setObservacionesFinalizar(`Movimiento rápido por escaneo · SKU ${payload.sku}`);
+        setScannerStatus(`Caja detectada · OP ${payload.opCodigo} · SKU ${payload.sku}`);
+        setLastScannedCaja(payload);
+        setScanModalOpen(false);
+        return;
+      }
     } catch (error) {
       console.error(error);
       alert("No se pudo procesar el escaneo.");
@@ -1319,9 +1306,9 @@ async function generarEtiquetaCajaPDF(orden: OrdenProduccion) {
               </button>
               <button
                 type="button"
-                onClick={() => setScanExpected("OP_PAR")}
+                onClick={() => setScanExpected("OP_CAJA")}
                 className={`rounded-xl px-4 py-2 text-sm font-semibold ${
-                  scanExpected === "OP_PAR"
+                  scanExpected === "OP_CAJA"
                     ? "bg-slate-900 text-white"
                     : "border border-slate-300 text-slate-700"
                 }`}
@@ -1545,10 +1532,8 @@ async function generarEtiquetaCajaPDF(orden: OrdenProduccion) {
                   <section className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
                     <h3 className="mb-2 text-lg font-black text-slate-900">Caja escaneada</h3>
                     <div className="space-y-1 text-sm text-slate-700">
-                      <div><b>Modelo:</b> {lastScannedCaja.modelo}</div>
-                      <div><b>Talla:</b> {lastScannedCaja.talla}</div>
-                      <div><b>Caja:</b> {lastScannedCaja.boxIndex} / {lastScannedCaja.boxTotal}</div>
                       <div><b>OP:</b> {lastScannedCaja.opCodigo}</div>
+                      <div><b>SKU:</b> {lastScannedCaja.sku}</div>
                     </div>
 
                     <button
