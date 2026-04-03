@@ -546,17 +546,27 @@ model Compra {
 }
 
 model DetalleCompra {
-  id            String   @id @default(cuid())
-  compraId      String
-  productoId    String
-  cantidad      Int
-  costoUnitario Decimal  @db.Decimal(12, 2)
-  subtotal      Decimal  @db.Decimal(12, 2)
-  observaciones String?
-  createdAt     DateTime @default(now())
+  id              String   @id @default(cuid())
+  compraId        String
+  tipoItem        String   // PRODUCTO | MATERIAL | INSUMO
+  itemId          String   // id original del catálogo seleccionado
+  productoId      String?  // solo se usa si el tipo es PRODUCTO
+  codigoItem      String
+  descripcionItem String
+  unidadMedida    String?  @default("UND")
+  cantidad        Int
+  costoUnitario   Decimal  @db.Decimal(12, 2)
+  subtotal        Decimal  @db.Decimal(12, 2)
+  observaciones   String?
+  createdAt       DateTime @default(now())
 
   compra   Compra   @relation(fields: [compraId], references: [id], onDelete: Cascade)
-  producto Producto @relation(fields: [productoId], references: [id])
+  producto Producto? @relation(fields: [productoId], references: [id])
+
+  @@index([compraId])
+  @@index([productoId])
+  @@index([tipoItem])
+  @@index([itemId])
 }
 
 model HistorialCompra {
@@ -570,4 +580,28 @@ model HistorialCompra {
   createdAt      DateTime @default(now())
 
   compra Compra @relation(fields: [compraId], references: [id], onDelete: Cascade)
+}
+
+model Material {
+  id               String   @id @default(cuid())
+  codigo           String   @unique
+  nombre           String
+  descripcion      String?
+  unidadMedida     String?  @default("UND")
+  costoReferencial Decimal  @default(0) @db.Decimal(12, 2)
+  estado           String   @default("ACTIVO") // ACTIVO | INACTIVO
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model Insumo {
+  id               String   @id @default(cuid())
+  codigo           String   @unique
+  nombre           String
+  descripcion      String?
+  unidadMedida     String?  @default("UND")
+  costoReferencial Decimal  @default(0) @db.Decimal(12, 2)
+  estado           String   @default("ACTIVO") // ACTIVO | INACTIVO
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }

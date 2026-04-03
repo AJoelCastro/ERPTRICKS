@@ -18,6 +18,9 @@ const pedidosRoutes = require("./routes/pedidos.routes");
 const produccionRoutes = require("./routes/produccion.routes");
 const proveedoresRoutes = require("./routes/proveedores.routes");
 const comprasRoutes = require("./routes/compras.routes");
+const materialesRoutes = require("./routes/materiales.routes");
+const insumosRoutes = require("./routes/insumos.routes");
+
 
 // AUTH / SEGURIDAD
 const authRoutes = require("./routes/auth.routes");
@@ -82,6 +85,8 @@ app.use("/pedidos", pedidosRoutes);
 app.use("/produccion", produccionRoutes);
 app.use("/proveedores", proveedoresRoutes);
 app.use("/compras", comprasRoutes);
+app.use("/materiales", materialesRoutes);
+app.use("/insumos", insumosRoutes);
 
 const PORT = process.env.PORT || 3001;
 
